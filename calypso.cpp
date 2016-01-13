@@ -23,13 +23,44 @@ namespace {
 
 // CONSTANTS
 
+static const uint8_t  INET     =  4;
 static const uint16_t DNS_PORT = 53;
 
 // GLOBAL DATA
 
-static int g_queue;
+typedef std::unordered_map<uint16_t, uint16_t> DnsRequests;
+
+static int         g_queue;
+static DnsRequests g_dnsRequests;
 
 // TYPES
+
+struct Internet {
+    uint32_t      family;
+    uint8_t       headerWords         :  4;
+    uint8_t       version             :  4;
+    uint8_t       dscpEcn;
+    uint16_t      length;
+    uint16_t      identification;
+    uint16_t      flagsFragmentOffset;
+    uint8_t       timeToLive;
+    uint8_t       protocol;
+    uint16_t      headerChecksum;
+    uint32_t      sourceAddress;
+    uint32_t      destinationAddress;
+    unsigned char options[];
+};
+
+struct Udp {
+    uint16_t sourcePort;
+    uint16_t destinationPort;
+    uint16_t length;
+    uint16_t checksum;
+};
+
+struct Dns {
+    uint16_t transactionId;
+};
 
 struct PacketFilterEvent {
     int           (*handler)(uintptr_t     packetFilter,
@@ -40,13 +71,13 @@ struct PacketFilterEvent {
 };
 
 struct EndpointId {
-    std::string  interface;
-    unsigned int address;
+    std::string interface;
+    uint32_t    address;
 };
 
 struct Endpoint {
-    int          packetFilter;
-    unsigned int address;
+    int      packetFilter;
+    uint32_t address;
 };
 
 // ARGUMENT PARSING
@@ -97,16 +128,35 @@ static int parseArguments(std::vector<EndpointId>         *ids,
 
 // NETWORK BYTE MANIPULATION
 
+template <class T>
+void copy(T *destination, const unsigned char *source)
+{
+    std::copy_n(source,
+                sizeof(T),
+                static_cast<unsigned char *>(
+                                            static_cast<void *>(destination)));
+}
+
+template <class T>
+void copy(unsigned char *destination, const T& source)
+{
+    std::copy_n(static_cast<const unsigned char *>(
+                                          static_cast<const void *>(&source)),
+                sizeof(T),
+                destination);
+}
+
 static uint16_t networkToHost(uint16_t source)
 {
     return ntohs(source);
 }
 
-template <class T>
-static T slice(unsigned char *data, std::size_t offset)
+/*
+static uint32_t networkToHost(uint32_t source)
 {
-    return *reinterpret_cast<T *>(data + offset);
+    return ntohl(source);
 }
+*/
 
 // BERKELEY PACKET FILTER UTILITIES
 
@@ -177,31 +227,59 @@ static int openEndpoint(Endpoint *endpoint, const EndpointId& id)
 
 // SOURCE RECEIVER HANDLERS
 
-static void onSourcePacket(unsigned char *data,
-                           unsigned int   length,
-                           void          *userData)
+static int onSourcePacket(unsigned char *data,
+                          uint32_t       dataLength,
+                          void          *userData)
 {
-    uint32_t addressFamily = slice<uint32_t>(data, 0);
-    if (addressFamily != AF_INET) {
-        return;
+    Internet internet;
+    copy(&internet, data);
+
+    if (internet.family != AF_INET || internet.version != INET) {
+        // TBD: use a 'BPF' program for this
+        return 0;
     }
 
     std::vector<Endpoint> endpoints =
                                *static_cast<std::vector<Endpoint> *>(userData);
 
-    const unsigned char *addressRaw =
-                      reinterpret_cast<unsigned char *>(&endpoints[0].address);
-    if (!std::equal(addressRaw, addressRaw + 4, data + 0x14)) {
-        return;
+    if (endpoints[0].address != internet.sourceAddress) {
+        // TBD: use a 'BPF' program for this
+        return 0;
     }
 
-    if (data[0x0d] == IPPROTO_UDP) {
-        int ipHeaderSize = 4 * (data[0x04] & 0x0f);
-        auto destinationPort =
-                          networkToHost(slice<uint16_t>(data,
-                                                        4 + ipHeaderSize + 2));
-        if (destinationPort == DNS_PORT) {
-            std::cout << "udp!\n";
+    if (internet.protocol == IPPROTO_UDP) {
+        int internetHeaderSize = 4 * (internet.headerWords);
+        Udp udp;
+        copy(&udp, data + 4 + internetHeaderSize);
+
+        if (networkToHost(udp.destinationPort) == DNS_PORT) {
+            if (g_dnsRequests.size() == (1 << 16)) {
+                std::cerr << "DNS request table full\n";
+                return -1;
+            }
+
+            Dns dns;
+            copy(&dns, data + 4 + internetHeaderSize + sizeof(Udp));
+            uint16_t transactionId;
+            while (true) {
+                arc4random_buf(&transactionId, sizeof(transactionId));
+                if (g_dnsRequests.insert(
+                    std::make_pair(transactionId, dns.transactionId)).second) {
+                    break;
+                }
+            }
+
+            std::vector<unsigned char> dnsRequest;
+            dnsRequest.reserve(dataLength);
+            std::copy_n(data, dataLength, std::back_inserter(dnsRequest));
+            Dns newDns;
+            newDns.transactionId = transactionId;
+            //copy(dnsRequest.data() + 4 + internetHeaderSize + sizeof(Udp),
+                 //newDns);
+
+            write(endpoints[1].packetFilter,
+                  dnsRequest.data(),
+                  dnsRequest.size());
         }
     }
     //std::cout.write(reinterpret_cast<char *>(data + 4), length - 4);
@@ -215,6 +293,7 @@ static void onSourcePacket(unsigned char *data,
                 data + 0x14);
     write(info.packetFilter, data + 4, length - 4); // ip header?
     */
+    return 0;
 }
 
 static int onSourceEndpointData(uintptr_t     packetFilter,
@@ -232,11 +311,10 @@ static int onSourceEndpointData(uintptr_t     packetFilter,
         unsigned char *packetData = packet.data();
         while (0 < bytesRead) {
             struct bpf_hdr header;
-            std::copy_n(packetData,
-                        sizeof(struct bpf_hdr),
-                        reinterpret_cast<unsigned char *>(&header));
+            copy(&header, packetData);
+
             unsigned char *data       = packetData + header.bh_hdrlen;
-            ssize_t        dataLength = header.bh_caplen;
+            uint32_t       dataLength = header.bh_caplen;
 
             packetData += BPF_WORDALIGN(header.bh_hdrlen + header.bh_caplen);
             bytesRead  -= BPF_WORDALIGN(header.bh_hdrlen + header.bh_caplen);
