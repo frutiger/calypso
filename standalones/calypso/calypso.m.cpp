@@ -4,7 +4,6 @@
 #include <conduit_listener.h>
 #include <maxwell_queue.h>
 
-#include <array>
 #include <iostream>
 #include <vector>
 
