@@ -15,6 +15,7 @@ target_compile_features(hauberk PUBLIC cxx_strong_enums)
 
 add_library(trammel standalones/trammel/trammel_address.cpp
                     standalones/trammel/trammel_capture.cpp
+                    standalones/trammel/trammel_duplex.cpp
                     standalones/trammel/trammel_interface.cpp
                     standalones/trammel/trammel_interfacesutil.cpp
                     standalones/trammel/trammel_iterator.cpp

@@ -38,10 +38,15 @@ int Resolver::open(std::ostream& errorStream)
     return 0;
 }
 
-int Resolver::resolve(const hauberk::Internet& internet)
+int Resolver::resolve(const hauberk::Internet&  internet,
+                      ResolutionHandler         handler,
+                      void                     *userData)
 {
-    internet.rest();
-    return 0;
+    for (EndpointDuplexes::size_type i = 0;
+                                     i < d_endpointDuplexes.size();
+                                   ++i) {
+        //d_endpointDuplexes[i].d_sender
+    }
 }
 
 }  // close namespace 'conduit'

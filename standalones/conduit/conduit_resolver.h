@@ -51,6 +51,12 @@ class Resolver {
     EndpointDuplexes                   d_endpointDuplexes;
 
   public:
+    // TYPES
+    typedef void (*ResolutionHandler)(const hauberk::Internet&  request,
+                                      std::uint32_t             gateway,
+                                      const hauberk::Internet&  response,
+                                      void                     *userData);
+
     // DELETED METHODS
     Resolver(const Resolver&)            = delete;
     Resolver& operator=(const Resolver&) = delete;
@@ -64,7 +70,9 @@ class Resolver {
     int open(std::ostream& errorStream);
         // TBD: contract
 
-    int resolve(const hauberk::Internet& internet);
+    int resolve(const hauberk::Internet&  internet,
+                ResolutionHandler         handler,
+                void                     *userData);
         // TBD: contract
 };
 

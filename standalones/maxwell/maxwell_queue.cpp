@@ -37,7 +37,7 @@ Queue::ReadHandle::~ReadHandle()
     };
 
     if (kevent(d_kernelQueue, &change, 1, 0, 0, 0) == -1) {
-        abort();
+        std::abort();
     }
 }
 
