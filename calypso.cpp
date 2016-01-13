@@ -30,12 +30,11 @@ static const uint16_t DNS_PORT = 53;
 
 typedef std::unordered_map<uint16_t, uint16_t> DnsRequests;
 
-static int         g_queue;
 static DnsRequests g_dnsRequests;
 
 // TYPES
 
-struct Internet {
+struct Ip {
     uint32_t      family;
     uint8_t       headerWords         :  4;
     uint8_t       version             :  4;
@@ -70,6 +69,12 @@ struct PacketFilterEvent {
     void           *userData;
 };
 
+struct Interface {
+    uint32_t               address;
+    bool                   isLoopback;
+    std::array<uint8_t, 8> hardwareAddress
+};
+
 struct EndpointId {
     std::string interface;
     uint32_t    address;
@@ -89,39 +94,20 @@ static std::ostream& usage(std::ostream& stream, const std::string& name)
                      "        where <endpoint> = <address>@<interface>\n";
 }
 
-static int parseEndpointId(EndpointId *id, const std::string& argument)
-{
-    auto atPosition = argument.find('@');
-    if (atPosition == std::string::npos) {
-        return -1;
-    }
-
-    id->interface = argument.substr(atPosition + 1);
-
-    auto addressString = argument.substr(0, atPosition);
-    struct in_addr address;
-    if (0 == inet_aton(addressString.c_str(), &address)) {
-        return -1;
-    }
-    id->address = address.s_addr;
-
-    return 0;
-}
-
-static int parseArguments(std::vector<EndpointId>         *ids,
+static int parseArguments(std::vector<uint32_t>           *addresses,
                           const std::vector<std::string>&  arguments)
 {
+    addresses->clear();
     if (arguments.size() < 2) {
         return -1;
     }
 
-    ids->clear();
     for (auto argument: arguments) {
-        EndpointId id;
-        if (parseEndpointId(&id, argument)) {
+        struct in_addr address;
+        if (0 == inet_aton(addressString.c_str(), &address)) {
             return -1;
         }
-        ids->push_back(id);
+        addresses.push_back(address.s_addr);
     }
     return 0;
 }
@@ -146,17 +132,44 @@ void copy(unsigned char *destination, const T& source)
                 destination);
 }
 
+template <class DESTINATION, class SOURCE>
+void copy(DESTINATION *destination, const SOURCE& source)
+{
+    std::copy_n(static_cast<const unsigned char *>(
+                                          static_cast<const void *>(&source)),
+                sizeof(SOURCE),
+                static_cast<unsigned char *>(
+                                            static_cast<void *>(destination)));
+}
+
 static uint16_t networkToHost(uint16_t source)
 {
     return ntohs(source);
 }
 
+static uint16_t hostToNetwork(uint16_t source)
+{
+    return htonl(source);
+}
 /*
 static uint32_t networkToHost(uint32_t source)
 {
     return ntohl(source);
 }
 */
+
+// INTERFACE UTILITIES
+
+static int getInterface(Interface *interface, uint32_t address)
+{
+    int socketDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socketDescriptor == -1) {
+        std::cerr << "Failed to open socket while determining interface\n";
+        return -1;
+    }
+
+    connect(socketDescriptor
+}
 
 // BERKELEY PACKET FILTER UTILITIES
 
@@ -227,72 +240,67 @@ static int openEndpoint(Endpoint *endpoint, const EndpointId& id)
 
 // SOURCE RECEIVER HANDLERS
 
-static int onSourcePacket(unsigned char *data,
-                          uint32_t       dataLength,
-                          void          *userData)
+static int onSourcePacket(const unsigned char *data,
+                          uint32_t             dataLength,
+                          void                *userData)
 {
-    Internet internet;
-    copy(&internet, data);
-
-    if (internet.family != AF_INET || internet.version != INET) {
-        // TBD: use a 'BPF' program for this
-        return 0;
-    }
+    Ip inPacket;
+    copy(&inPacket, data);
 
     std::vector<Endpoint> endpoints =
                                *static_cast<std::vector<Endpoint> *>(userData);
 
-    if (endpoints[0].address != internet.sourceAddress) {
+    if (endpoints[0].address != inPacket.sourceAddress) {
         // TBD: use a 'BPF' program for this
         return 0;
     }
 
-    if (internet.protocol == IPPROTO_UDP) {
-        int internetHeaderSize = 4 * (internet.headerWords);
-        Udp udp;
-        copy(&udp, data + 4 + internetHeaderSize);
+    if (inPacket.protocol == IPPROTO_UDP) {
+        int internetHeaderSize = 4 * (inPacket.headerWords);
+        Udp inUdp;
+        copy(&inUdp, data + 4 + internetHeaderSize);
 
-        if (networkToHost(udp.destinationPort) == DNS_PORT) {
+        if (networkToHost(inUdp.destinationPort) == DNS_PORT) {
             if (g_dnsRequests.size() == (1 << 16)) {
                 std::cerr << "DNS request table full\n";
                 return -1;
             }
 
-            Dns dns;
-            copy(&dns, data + 4 + internetHeaderSize + sizeof(Udp));
-            uint16_t transactionId;
+            Dns inDns;
+            copy(&inDns, data + 4 + internetHeaderSize + sizeof(Udp));
+            uint16_t outTxId;
             while (true) {
-                arc4random_buf(&transactionId, sizeof(transactionId));
-                if (g_dnsRequests.insert(
-                    std::make_pair(transactionId, dns.transactionId)).second) {
+                arc4random_buf(&outTxId, sizeof(outTxId));
+                auto dnsRequest = std::make_pair(outTxId, inDns.transactionId);
+                if (g_dnsRequests.insert(dnsRequest).second) {
                     break;
                 }
             }
 
-            std::vector<unsigned char> dnsRequest;
-            dnsRequest.reserve(dataLength);
-            std::copy_n(data, dataLength, std::back_inserter(dnsRequest));
-            Dns newDns;
-            newDns.transactionId = transactionId;
+            std::vector<unsigned char> outPacket(data, dataLength);
+            copy(dnsRequest.data() + 4
+
+            Dns outDns;
+            outDns.transactionId = transactionId;
             //copy(dnsRequest.data() + 4 + internetHeaderSize + sizeof(Udp),
                  //newDns);
 
-            write(endpoints[1].packetFilter,
-                  dnsRequest.data(),
-                  dnsRequest.size());
+            int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            struct sockaddr_in dest = {
+                AF_INET,
+                hostToNetwork(53),
+                { endpoints[1].address }
+            };
+            struct sockaddr d;
+            copy(&d, dest);
+            sendto(s,
+                   dnsRequest.data() + 4,
+                   dnsRequest.size() - 4,
+                   0,
+                   &d,
+                   sizeof(struct sockaddr_in));
         }
     }
-    //std::cout.write(reinterpret_cast<char *>(data + 4), length - 4);
-    /*
-    if (*(data + 0x14) != 127 || *(data + 0x15) != 0 ||
-        *(data + 0x16) !=   0 || *(data + 0x17) != 2) {
-        return;
-    }
-    std::copy_n(reinterpret_cast<unsigned char *>(&info.address),
-                4,
-                data + 0x14);
-    write(info.packetFilter, data + 4, length - 4); // ip header?
-    */
     return 0;
 }
 
@@ -331,11 +339,9 @@ static int onSourceEndpointData(uintptr_t     packetFilter,
 
 int main(int argc, char **argv)
 {
-    srandomdev();
-
     std::vector<std::string> arguments(argv + 1, argv + argc);
-    std::vector<EndpointId>  ids;
-    if (parseArguments(&ids, arguments)) {
+    std::vector<uint32_t>    addresses;
+    if (parseArguments(&addresses, arguments)) {
         usage(std::cerr, argv[0]);
         return -1;
     }
@@ -349,8 +355,8 @@ int main(int argc, char **argv)
         endpoints.push_back(endpoint);
     }
 
-    g_queue = kqueue();
-    if (g_queue == -1) {
+    int queue = kqueue();
+    if (queue == -1) {
         std::cerr << "Failed to open kernel queue\n";
         return -1;
     }
@@ -373,7 +379,7 @@ int main(int argc, char **argv)
         0,
         &event
     };
-    if (kevent(g_queue, &initialSet, 1, 0, 0, 0)) {
+    if (kevent(queue, &initialSet, 1, 0, 0, 0)) {
         std::cerr << "Failed to add source endpoint to kernel queue\n";
         return -1;
     }
@@ -381,7 +387,7 @@ int main(int argc, char **argv)
     struct kevent events[0x100];
     while (true) {
         struct timespec fiveSeconds = { 5 };
-        auto numEvents = kevent(g_queue,
+        auto numEvents = kevent(queue,
                                 0,
                                 0,
                                 events,
