@@ -34,7 +34,7 @@ int main(int argc, char **argv)
                                interfaces[0].second,
                                interfaces.begin() + 1,
                                interfaces.end());
-    if (listener.activate(std::cerr, queue)) {
+    if (listener.open(std::cerr, queue)) {
         return -1;
     }
 

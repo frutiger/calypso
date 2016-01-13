@@ -33,12 +33,19 @@ int Listener::dispatchPacket(const hauberk::Internet&  internet,
 int Listener::processDnsRequest(const hauberk::Internet& internet)
 {
     //d_resolver.resolve
-    std::cout << "dns request from " << internet.sourceAddress() << '\n';
     return 0;
 }
 
 int Listener::processPacket(const hauberk::Internet& internet)
 {
+    if (hauberk::Internet::Protocol(internet.protocol()) ==
+                                            hauberk::Internet::Protocol::UDP) {
+        hauberk::Udp udp(internet.payload());
+        if (hauberk::Udp::Port(udp.destinationPort()) ==
+                                                     hauberk::Udp::Port::DNS) {
+            return processDnsRequest(internet);
+        }
+    }
     return 0;
 }
 
@@ -54,20 +61,18 @@ Listener::Listener(
                                    this))
 , d_resolver(endpoint, endpointEnd)
 {
-    // TBD: silence warning
-    ++d_address;
 }
 
 // MANIPULATORS
-int Listener::activate(std::ostream& errorStream, const maxwell::Queue& queue)
+int Listener::open(std::ostream& errorStream, const maxwell::Queue& queue)
 {
     if (d_duplex.open(errorStream, 10, 65536, true, queue)) {
         return -1;
     }
 
-    if (d_resolver.open(errorStream, 10, 65536, true, queue)) {
-        return -1;
-    }
+    //if (d_resolver.open(errorStream, 10, 65536, true, queue)) {
+        //return -1;
+    //}
 
     return 0;
 }

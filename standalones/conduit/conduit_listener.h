@@ -68,7 +68,7 @@ class Listener {
         // TBD: contract
 
     // MANIPULATORS
-    int activate(std::ostream& errorStream, const maxwell::Queue& queue);
+    int open(std::ostream& errorStream, const maxwell::Queue& queue);
         // TBD: contract
 };
 
