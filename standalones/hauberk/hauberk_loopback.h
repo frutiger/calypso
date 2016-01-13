@@ -11,17 +11,17 @@ namespace hauberk {
 
 class Loopback {
     // DATA
-    const uint8_t *d_buffer;
+    const std::uint8_t *d_buffer;
 
   public:
     // CREATORS
-    explicit Loopback(const uint8_t *buffer);
+    explicit Loopback(const std::uint8_t *buffer);
 
     // ACCESSORS
     std::uint32_t protocolFamily() const;
         // TBD: contract
 
-    const uint8_t *rest() const;
+    const std::uint8_t *rest() const;
         // TBD: contract
 };
 

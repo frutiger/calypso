@@ -2,6 +2,14 @@
 #ifndef CONDUIT_LISTENER
 #define CONDUIT_LISTENER
 
+#ifndef INCLUDED_CONDUIT_ARGUMENTPARSER
+#include <conduit_argumentparser.h>
+#endif
+
+#ifndef INCLUDED_CONDUIT_RESOLVER
+#include <conduit_resolver.h>
+#endif
+
 #ifndef INCLUDED_MAXWELL_EVENTHANDLER
 #include <maxwell_eventhandler.h>
 #endif
@@ -38,6 +46,7 @@ class Listener {
     trammel::Capture           d_capture;
     bool                       d_activated;
     trammel::Capture::LinkType d_linkType;
+    Resolver                   d_resolver;
 
     // PRIVATE CLASS METHODS
     static int dispatchEvent(std::uintptr_t, void *userData);
@@ -46,14 +55,14 @@ class Listener {
     int processDnsRequest(const hauberk::Internet& internet);
         // TBD: contract
 
-    int processLoopbackPacket(const uint8_t *data);
+    int processLoopbackPacket(const std::uint8_t *data);
         // TBD: contract
 
-    int processEthernetPacket(const uint8_t *data);
+    int processEthernetPacket(const std::uint8_t *data);
         // TBD: contract
 
     int processPacket(const trammel::CaptureMetadata *metadata,
-                      const uint8_t                  *data);
+                      const std::uint8_t              *data);
         // TBD: contract
 
     int packetsReady();
@@ -61,7 +70,10 @@ class Listener {
 
   public:
     // CREATORS
-    Listener(const std::string& interface, std::uint32_t address);
+    Listener(const std::string&                                 interface,
+             std::uint32_t                                      address,
+             ArgumentParser::InterfaceAddresses::const_iterator endpoint,
+             ArgumentParser::InterfaceAddresses::const_iterator endpointEnd);
         // TBD: contract
 
     // MANIPULATORS

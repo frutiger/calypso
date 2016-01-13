@@ -11,7 +11,7 @@ namespace hauberk {
                                  // ---------
 
 // CREATORS
-Udp::Udp(const uint8_t *buffer)
+Udp::Udp(const std::uint8_t *buffer)
 : d_buffer(buffer)
 {
 }

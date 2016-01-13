@@ -7,7 +7,7 @@
 namespace hauberk {
 
 // CREATORS
-Internet::Internet(const uint8_t *buffer)
+Internet::Internet(const std::uint8_t *buffer)
 : d_buffer(buffer)
 {
 }

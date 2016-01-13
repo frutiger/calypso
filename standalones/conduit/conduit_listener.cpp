@@ -35,7 +35,7 @@ int Listener::processDnsRequest(const hauberk::Internet& internet)
     return 0;
 }
 
-int Listener::processLoopbackPacket(const uint8_t *data)
+int Listener::processLoopbackPacket(const std::uint8_t *data)
 {
     hauberk::Loopback loopback(data);
     if (loopback.protocolFamily() != PF_INET) {
@@ -59,16 +59,16 @@ int Listener::processLoopbackPacket(const uint8_t *data)
     return 0;
 }
 
-int Listener::processEthernetPacket(const uint8_t *data)
+int Listener::processEthernetPacket(const std::uint8_t *data)
 {
     // TBD: implement
-    uint8_t c = data[0] + 1;
+    std::uint8_t c = data[0] + 1;
     c++;
     return 0;
 }
 
 int Listener::processPacket(const trammel::CaptureMetadata *metadata,
-                            const uint8_t                  *data)
+                            const std::uint8_t             *data)
 {
     if (metadata->capturedDataLength() != metadata->dataLength()) {
         return -1;
@@ -91,7 +91,7 @@ int Listener::packetsReady()
     assert(d_activated);
 
     const trammel::CaptureMetadata *metadata;
-    const uint8_t                  *data;
+    const std::uint8_t             *data;
     while (!d_capture.read(&metadata, &data)) {
         if (processPacket(metadata, data)) {
             return -1;
@@ -101,7 +101,11 @@ int Listener::packetsReady()
 }
 
 // CREATORS
-Listener::Listener(const std::string& interface, std::uint32_t address)
+Listener::Listener(
+              const std::string&                                 interface,
+              std::uint32_t                                      address,
+              ArgumentParser::InterfaceAddresses::const_iterator endpoint,
+              ArgumentParser::InterfaceAddresses::const_iterator endpointEnd)
 : d_interface(interface)
 , d_address(address)
 , d_eventHandler(&Listener::dispatchEvent, this)
@@ -109,6 +113,7 @@ Listener::Listener(const std::string& interface, std::uint32_t address)
 , d_capture()
 , d_activated()
 , d_linkType()
+, d_resolver(endpoint, endpointEnd)
 {
     // TBD: silence warning
     ++d_address;
@@ -119,15 +124,11 @@ int Listener::activate(std::ostream& errorStream, const maxwell::Queue& queue)
 {
     assert(!d_activated);
 
-    std::string openError;
-    if (d_capture.open(d_interface, &openError)) {
-        errorStream << "Failed to open listener capture: " << openError
-                    << '\n';
+    if (d_capture.open(errorStream, d_interface)) {
         return -1;
     }
 
-    if (d_capture.setNonblock(true)) {
-        errorStream << "Failed to set nonblocking mode\n";
+    if (d_capture.setNonblock(errorStream, true)) {
         return -1;
     }
 
@@ -139,7 +140,7 @@ int Listener::activate(std::ostream& errorStream, const maxwell::Queue& queue)
     d_activated = true;
 
     d_linkType = d_capture.linkType();
-    uintptr_t listenDescriptor;
+    std::uintptr_t listenDescriptor;
     if (d_capture.fileDescriptor(&listenDescriptor)) {
         errorStream << "Failed to get listener descriptor\n";
         return -1;

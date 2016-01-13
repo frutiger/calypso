@@ -15,7 +15,7 @@ namespace hauberk {
 
 class Udp {
     // DATA
-    const uint8_t *d_buffer;
+    const std::uint8_t *d_buffer;
 
   public:
     // TYPES
@@ -24,7 +24,7 @@ class Udp {
     };
 
     // CREATORS
-    explicit Udp(const uint8_t *buffer);
+    explicit Udp(const std::uint8_t *buffer);
         // TBD: contract
 
     // ACCESSORS

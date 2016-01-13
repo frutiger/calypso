@@ -24,13 +24,13 @@ struct BufferUtil {
     static void copy(DESTINATION *destination, const SOURCE& source);
         // TBD: contract
 
-    static void reverseBits(uint8_t *value);
+    static void reverseBits(std::uint8_t *value);
         // TBD: contract
 
-    static void toHostOrder(uint16_t *value);
+    static void toHostOrder(std::uint16_t *value);
         // TBD: contract
 
-    static void toHostOrder(uint32_t *value);
+    static void toHostOrder(std::uint32_t *value);
         // TBD: contract
 
     template <class TYPE>

@@ -7,7 +7,7 @@
 namespace hauberk {
 
 // CREATORS
-Loopback::Loopback(const uint8_t *buffer)
+Loopback::Loopback(const std::uint8_t *buffer)
 : d_buffer(buffer)
 {
 }
@@ -20,7 +20,7 @@ std::uint32_t Loopback::protocolFamily() const
     return result;
 }
 
-const uint8_t *Loopback::rest() const
+const std::uint8_t *Loopback::rest() const
 {
     return d_buffer + 4;
 }

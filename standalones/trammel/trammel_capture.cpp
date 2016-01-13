@@ -82,10 +82,6 @@ Capture::Capture()
 {
 }
 
-Capture::~Capture()
-{
-}
-
 // MANIPULATORS
 int Capture::activate(ActivationError *error)
 {
@@ -121,18 +117,16 @@ int Capture::fileDescriptor(std::uintptr_t *fileDescriptor)
     if (descriptor == -1) {
         return -1;
     }
-    *fileDescriptor = static_cast<uintptr_t>(descriptor);
+    *fileDescriptor = static_cast<std::uintptr_t>(descriptor);
     return 0;
 }
 
-int Capture::open(const std::string& interface, std::string *error)
+int Capture::open(std::ostream& errorStream, const std::string& interface)
 {
     char         errorBuffer[PCAP_ERRBUF_SIZE];
     struct pcap *capture = pcap_create(interface.c_str(), errorBuffer);
     if (!capture) {
-        if (error) {
-            error->assign(errorBuffer);
-        }
+        errorStream << "Failed to create pcap: " << errorBuffer;
         return -1;
     }
     else {
@@ -142,22 +136,20 @@ int Capture::open(const std::string& interface, std::string *error)
     return 0;
 }
 
-int Capture::setNonblock(int nonblock, std::string *error)
+int Capture::setNonblock(std::ostream& errorStream, int nonblock)
 {
     assert(d_handle);
 
     char errorBuffer[PCAP_ERRBUF_SIZE];
     if (pcap_setnonblock(d_handle.get(), nonblock, errorBuffer) == -1) {
-        if (error) {
-            error->assign(errorBuffer);
-        }
+        errorStream << "Failed to set nonblock: " << errorBuffer;
         return -1;
     }
     return 0;
 }
 
 int Capture::read(const CaptureMetadata **metadata,
-                  const uint8_t         **capturedData)
+                  const std::uint8_t    **capturedData)
 {
     struct pcap_pkthdr *header;
     if (pcap_next_ex(d_handle.get(), &header, capturedData) != 1) {

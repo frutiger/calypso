@@ -7,6 +7,11 @@
 #include <chrono>
 #endif
 
+#ifndef INCLUDED_OSTREAM
+#define INCLUDED_OSTREAM
+#include <ostream>
+#endif
+
 #ifndef INCLUDED_STRING
 #define INCLUDED_STRING
 #include <string>
@@ -86,9 +91,6 @@ class Capture {
     explicit Capture();
         // TBD: contract
 
-    ~Capture();
-        // TBD: contract
-
     // MANIPULATORS
     int activate(ActivationError *error = 0);
         // TBD: contract
@@ -99,13 +101,14 @@ class Capture {
     int fileDescriptor(std::uintptr_t *fileDescriptor);
         // TBD: contract
 
-    int open(const std::string& interface, std::string *error = 0);
+    int open(std::ostream& errorStream, const std::string& interface);
         // TBD: contract
 
-    int read(const CaptureMetadata **metadata, const uint8_t **capturedData);
+    int read(const CaptureMetadata **metadata,
+             const std::uint8_t    **capturedData);
         // TBD: contract
 
-    int setNonblock(int nonblock, std::string *error = 0);
+    int setNonblock(std::ostream& errorStream, int nonblock);
         // TBD: contract
 
     void setSnapshotLength(int snapshotLength);

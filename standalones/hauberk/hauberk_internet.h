@@ -11,7 +11,7 @@ namespace hauberk {
 
 class Internet {
     // DATA
-    const uint8_t *d_buffer;
+    const std::uint8_t *d_buffer;
 
   public:
     // TYPES
@@ -22,7 +22,7 @@ class Internet {
     };
 
     // CREATORS
-    explicit Internet(const uint8_t *buffer);
+    explicit Internet(const std::uint8_t *buffer);
         // TBD: contract
 
     // ACCESSORS

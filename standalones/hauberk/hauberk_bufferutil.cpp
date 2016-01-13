@@ -11,7 +11,7 @@ namespace hauberk {
                              // -----------------
 
 // CLASS METHODS
-void BufferUtil::reverseBits(uint8_t *value)
+void BufferUtil::reverseBits(std::uint8_t *value)
 {
     // TBD: no-op on big-endian hardware
     static const std::uint8_t REVERSED_BITS[] = {
@@ -51,12 +51,12 @@ void BufferUtil::reverseBits(uint8_t *value)
     *value = REVERSED_BITS[*value];
 }
 
-void BufferUtil::toHostOrder(uint16_t *value)
+void BufferUtil::toHostOrder(std::uint16_t *value)
 {
     *value = ntohs(*value);
 }
 
-void BufferUtil::toHostOrder(uint32_t *value)
+void BufferUtil::toHostOrder(std::uint32_t *value)
 {
     *value = ntohl(*value);
 }

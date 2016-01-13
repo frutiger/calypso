@@ -11,7 +11,7 @@ namespace hauberk {
                          // -------------------------
 
 // CLASS METHODS
-int InternetAddressUtil::fromDisplay(uint32_t           *address,
+int InternetAddressUtil::fromDisplay(std::uint32_t      *address,
                                      const std::string&  display)
 {
     struct in_addr internetAddress;

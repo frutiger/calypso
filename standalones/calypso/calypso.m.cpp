@@ -31,7 +31,9 @@ int main(int argc, char **argv)
     }
 
     conduit::Listener listener(interfaces[0].first,
-                               interfaces[0].second);
+                               interfaces[0].second,
+                               interfaces.begin() + 1,
+                               interfaces.end());
     if (listener.activate(std::cerr, queue)) {
         return -1;
     }

@@ -18,12 +18,14 @@ add_library(trammel standalones/trammel/trammel_address.cpp
                     standalones/trammel/trammel_interface.cpp
                     standalones/trammel/trammel_interfacesutil.cpp
                     standalones/trammel/trammel_iterator.cpp
-                    standalones/trammel/trammel_list.cpp)
+                    standalones/trammel/trammel_list.cpp
+                    standalones/trammel/trammel_send.cpp)
 target_include_directories(hauberk PUBLIC standalones/trammel)
 target_compile_features(trammel PUBLIC cxx_alias_templates)
 target_link_libraries(trammel hauberk -lpcap)
 
 add_library(conduit standalones/conduit/conduit_listener.cpp
+                    standalones/conduit/conduit_resolver.cpp
                     standalones/conduit/conduit_argumentparser.cpp)
 target_include_directories(conduit PUBLIC standalones/conduit)
 target_link_libraries(conduit trammel maxwell)
