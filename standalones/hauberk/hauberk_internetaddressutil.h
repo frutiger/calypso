@@ -1,5 +1,4 @@
 // hauberk_internetaddressutil.h
-
 #ifndef HAUBERK_INTERNETADDRESSUTIL
 #define HAUBERK_INTERNETADDRESSUTIL
 

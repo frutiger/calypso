@@ -1,5 +1,4 @@
 // conduit_argumentparser.h
-
 #ifndef CONDUIT_ARGUMENTPARSER
 #define CONDUIT_ARGUMENTPARSER
 
@@ -21,6 +20,11 @@
 #ifndef INCLUDED_VECTOR
 #define INCLUDED_VECTOR
 #include <vector>
+#endif
+
+#ifndef INCLUDED_UTILITY
+#define INCLUDED_UTILITY
+#include <utility>
 #endif
 
 namespace conduit {

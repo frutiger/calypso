@@ -1,5 +1,4 @@
 // maxwell_queue.h
-
 #ifndef MAXWELL_QUEUE
 #define MAXWELL_QUEUE
 

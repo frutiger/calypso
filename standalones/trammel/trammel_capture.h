@@ -1,5 +1,4 @@
 // trammel_capture.h
-
 #ifndef TRAMMEL_CAPTURE
 #define TRAMMEL_CAPTURE
 

@@ -1,5 +1,4 @@
 // conduit_listener.h
-
 #ifndef CONDUIT_LISTENER
 #define CONDUIT_LISTENER
 
@@ -21,7 +20,7 @@
 #include <string>
 #endif
 
-namespace maxwell { class  Queue;        }
+namespace maxwell { class Queue; }
 
 namespace conduit {
 

@@ -1,5 +1,4 @@
 // maxwell_eventhandler.h
-
 #ifndef MAXWELL_EVENTHANDLER
 #define MAXWELL_EVENTHANDLER
 

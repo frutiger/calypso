@@ -1,5 +1,4 @@
 // hauberk_socketaddress.h
-
 #ifndef HAUBERK_SOCKETADDRESS
 #define HAUBERK_SOCKETADDRESS
 
