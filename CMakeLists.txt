@@ -8,8 +8,10 @@ add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
                     standalones/hauberk/hauberk_internet.cpp
                     standalones/hauberk/hauberk_internetaddressutil.cpp
                     standalones/hauberk/hauberk_loopback.cpp
-                    standalones/hauberk/hauberk_socketaddress.cpp)
+                    standalones/hauberk/hauberk_socketaddress.cpp
+                    standalones/hauberk/hauberk_udp.cpp)
 target_include_directories(hauberk PUBLIC standalones/hauberk)
+target_compile_features(hauberk PUBLIC cxx_strong_enums)
 
 add_library(trammel standalones/trammel/trammel_address.cpp
                     standalones/trammel/trammel_capture.cpp

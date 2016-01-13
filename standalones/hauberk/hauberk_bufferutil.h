@@ -24,11 +24,17 @@ struct BufferUtil {
     static void copy(DESTINATION *destination, const SOURCE& source);
         // TBD: contract
 
-    static uint8_t reverseBits(uint8_t source);
+    static void reverseBits(uint8_t *value);
+        // TBD: contract
+
+    static void toHostOrder(uint16_t *value);
+        // TBD: contract
+
+    static void toHostOrder(uint32_t *value);
         // TBD: contract
 
     template <class TYPE>
-    static TYPE slice(const TYPE& source, uint8_t start, uint8_t end);
+    static TYPE slice(TYPE source, std::uint8_t start, std::uint8_t end);
 };
 
                              // -----------------
@@ -46,18 +52,9 @@ void BufferUtil::copy(DESTINATION *destination, const SOURCE& source)
 }
 
 template <class TYPE>
-TYPE BufferUtil::slice(const TYPE& source, uint8_t start, uint8_t end)
+TYPE BufferUtil::slice(TYPE source, std::uint8_t start, std::uint8_t end)
 {
-    TYPE result = 0;
-    TYPE mask   = 1;
-    for (uint8_t i = 0; i < sizeof(TYPE) * 8; ++i) {
-        if (i >= start && i < end && (source & mask)) {
-            result |= 1;
-        }
-        result <<= 1;
-        mask   <<= 1;
-    }
-    return result;
+    return (source >> ((8 * sizeof(TYPE)) - end)) & ((1 << (end - start)) - 1);
 }
 
 }  // close namespace 'hauberk'

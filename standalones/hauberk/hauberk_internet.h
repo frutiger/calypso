@@ -14,57 +14,64 @@ class Internet {
     const uint8_t *d_buffer;
 
   public:
+    // TYPES
+    enum class Protocol : std::uint8_t {
+        ICMP =  1,
+        TCP  =  6,
+        UDP  = 17,
+    };
+
     // CREATORS
     explicit Internet(const uint8_t *buffer);
         // TBD: contract
 
     // ACCESSORS
-    uint8_t version() const;
+    std::uint8_t version() const;
         // TBD: contract
 
-    uint16_t headerLength() const;
+    std::uint8_t headerLength() const;
         // TBD: contract
 
-    uint8_t differentiatedSercicesCodePoint() const;
+    std::uint8_t differentiatedServicesCodePoint() const;
         // TBD: contract
 
-    uint8_t explicitCongestioNotification() const;
+    std::uint8_t explicitCongestioNotification() const;
         // TBD: contract
 
-    uint16_t packetLength() const;
+    std::uint16_t length() const;
         // TBD: contract
 
-    uint16_t identification() const;
+    std::uint16_t identification() const;
         // TBD: contract
 
-    uint8_t flags() const;
+    std::uint8_t flags() const;
         // TBD: contract
 
-    uint16_t fragmentOffset() const;
+    std::uint16_t fragmentOffset() const;
         // TBD: contract
 
-    uint8_t timeToLive() const;
+    std::uint8_t timeToLive() const;
         // TBD: contract
 
-    uint8_t protocol() const;
+    std::uint8_t protocol() const;
         // TBD: contract
 
-    uint16_t headerChecksum() const;
+    std::uint16_t headerChecksum() const;
         // TBD: contract
 
-    uint32_t sourceAddress() const;
+    std::uint32_t sourceAddress() const;
         // TBD: contract
 
-    uint32_t destinationAddress() const;
+    std::uint32_t destinationAddress() const;
         // TBD: contract
 
-    uint32_t optionsLength() const;
+    std::uint8_t optionsLength() const;
         // TBD: contract
 
-    const uint8_t *optionsData() const;
+    const std::uint8_t *optionsData() const;
         // TBD: contract
 
-    const uint8_t *rest() const;
+    const std::uint8_t *rest() const;
         // TBD: contract
 };
 

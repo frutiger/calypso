@@ -20,7 +20,8 @@
 #include <string>
 #endif
 
-namespace maxwell { class Queue; }
+namespace hauberk { class Internet; }
+namespace maxwell { class Queue;    }
 
 namespace conduit {
 
@@ -42,6 +43,9 @@ class Listener {
     static int dispatchEvent(std::uintptr_t, void *userData);
 
     // MODIFIERS
+    int processDnsRequest(const hauberk::Internet& internet);
+        // TBD: contract
+
     int processLoopbackPacket(const uint8_t *data);
         // TBD: contract
 

@@ -20,8 +20,11 @@ namespace hauberk {
 
 struct InternetAddressUtil {
     // CLASS METHODS
-    static int displayToAddress(std::uint32_t      *address,
-                                const std::string&  display);
+    static int fromDisplay(std::uint32_t *address, const std::string& display);
+        // TBD: contract
+
+    static void toDisplay(std::string *display, std::uint32_t address);
+        // TBD: contract
 };
 
 }  // close namespace 'hauberk'

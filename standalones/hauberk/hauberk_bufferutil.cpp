@@ -2,6 +2,8 @@
 
 #include <hauberk_bufferutil.h>
 
+#include <arpa/inet.h>
+
 namespace hauberk {
 
                              // -----------------
@@ -9,9 +11,10 @@ namespace hauberk {
                              // -----------------
 
 // CLASS METHODS
-uint8_t BufferUtil::reverseBits(uint8_t source)
+void BufferUtil::reverseBits(uint8_t *value)
 {
-    static uint8_t REVERSED_BITS[] = {
+    // TBD: no-op on big-endian hardware
+    static const std::uint8_t REVERSED_BITS[] = {
          0, 128,  64, 192,  32, 160,  96, 224,
         16, 144,  80, 208,  48, 176, 112, 240,
          8, 136,  72, 200,  40, 168, 104, 232,
@@ -45,7 +48,17 @@ uint8_t BufferUtil::reverseBits(uint8_t source)
         15, 143,  79, 207,  47, 175, 111, 239,
         31, 159,  95, 223,  63, 191, 127, 255,
     };
-    return REVERSED_BITS[source];
+    *value = REVERSED_BITS[*value];
+}
+
+void BufferUtil::toHostOrder(uint16_t *value)
+{
+    *value = ntohs(*value);
+}
+
+void BufferUtil::toHostOrder(uint32_t *value)
+{
+    *value = ntohl(*value);
 }
 
 }  // close namespace 'hauberk'

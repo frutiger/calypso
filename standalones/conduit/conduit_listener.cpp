@@ -4,7 +4,9 @@
 
 #include <maxwell_queue.h>
 #include <hauberk_internet.h>
+#include <hauberk_internetaddressutil.h>
 #include <hauberk_loopback.h>
+#include <hauberk_udp.h>
 
 #include <array>
 #include <cassert>
@@ -27,6 +29,12 @@ int Listener::dispatchEvent(std::uintptr_t, void *userData)
 }
 
 // MODIFIERS
+int Listener::processDnsRequest(const hauberk::Internet& internet)
+{
+    std::cout << "dns request from " << internet.sourceAddress() << '\n';
+    return 0;
+}
+
 int Listener::processLoopbackPacket(const uint8_t *data)
 {
     hauberk::Loopback loopback(data);
@@ -39,11 +47,21 @@ int Listener::processLoopbackPacket(const uint8_t *data)
         return 0;
     }
 
+    if (hauberk::Internet::Protocol(internet.protocol()) ==
+                                            hauberk::Internet::Protocol::UDP) {
+        hauberk::Udp udp(internet.rest());
+        if (hauberk::Udp::Port(udp.destinationPort()) ==
+                                                     hauberk::Udp::Port::DNS) {
+            return processDnsRequest(internet);
+        }
+    }
+
     return 0;
 }
 
 int Listener::processEthernetPacket(const uint8_t *data)
 {
+    // TBD: implement
     uint8_t c = data[0] + 1;
     c++;
     return 0;

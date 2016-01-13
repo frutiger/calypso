@@ -29,8 +29,7 @@ int ArgumentParser::toAddresses(std::ostream&                   errorStream,
     result->clear();
     for (auto argument: arguments) {
         std::uint32_t address;
-        if (hauberk::InternetAddressUtil::displayToAddress(&address,
-                                                           argument)) {
+        if (hauberk::InternetAddressUtil::fromDisplay(&address, argument)) {
             errorStream << "Invalid address: " << argument << "\n\n";
             usage(errorStream, programName);
             return -1;
