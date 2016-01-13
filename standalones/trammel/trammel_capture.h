@@ -47,11 +47,6 @@ namespace trammel {
                                // =============
 
 class Capture {
-  public:
-    // TYPES
-    typedef int (*PacketHandler)(const hauberk::Internet&  internet,
-                                 void                     *userData);
-
   private:
     // PRIVATE TYPES
 

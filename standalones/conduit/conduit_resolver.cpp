@@ -18,16 +18,24 @@ Resolver::Resolver(
 : d_duplexes()
 {
     for (; endpoint != endpointEnd; ++endpoint) {
-        d_duplexes.push_back(trammel::Duplex(endpoint->first,
-                                             0));  // TBD: handler
+        // TBD: actually set a handler
+        d_duplexes.push_back(trammel::Duplex::create(endpoint->first, 0, 0));
     }
 }
 
 // MANIPULATORS
-int Resolver::open(std::ostream& errorStream)
+int Resolver::open(std::ostream&         errorStream,
+                   int                   timeoutMilliseconds,
+                   int                   snapshotLength,
+                   int                   nonblock,
+                   const maxwell::Queue& queue)
 {
     for (auto& duplex: d_duplexes) {
-        if (duplex.open(errorStream)) {
+        if (duplex.open(errorStream,
+                        timeoutMilliseconds,
+                        snapshotLength,
+                        nonblock,
+                        queue)) {
             return -1;
         }
     }

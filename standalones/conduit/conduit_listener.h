@@ -14,8 +14,8 @@
 #include <maxwell_eventhandler.h>
 #endif
 
-#ifndef INCLUDED_TRAMMEL_CAPTURE
-#include <trammel_capture.h>
+#ifndef INCLUDED_TRAMMEL_DUPLEX
+#include <trammel_duplex.h>
 #endif
 
 #ifndef INCLUDED_CSTDINT
@@ -42,6 +42,11 @@ class Listener {
     std::uint32_t   d_address;
     trammel::Duplex d_duplex;
     Resolver        d_resolver;
+
+    // PRIVATE CLASS METHODS
+    static int dispatchPacket(const hauberk::Internet&  internet,
+                              void                     *userData);
+        // TBD: contract
 
     // MODIFIERS
     int processDnsRequest(const hauberk::Internet& internet);

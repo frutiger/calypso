@@ -76,27 +76,6 @@ int Send::open(std::ostream& errorStream)
 
 int Send::write(const hauberk::Internet& internet)
 {
-    typedef std::vector<std::uint8_t> Data;
-
-    Data               packet;
-    Data::iterator p = packet.begin();
-    if (!d_hardwareAddress.empty()) {
-        packet.reserve(d_hardwareAddress.size() + internet.length());
-        p = std::copy(d_hardwareAddress.begin(), d_hardwareAddress.end(), p);
-    }
-    else {
-        packet.reserve(sizeof(PROTOCOL_FAMILY_INTERNET) + internet.length());
-        hauberk::BufferUtil::copy(packet.data(),
-                                  PROTOCOL_FAMILY_INTERNET);
-        p = p + sizeof(PROTOCOL_FAMILY_INTERNET);
-    }
-
-    p = std::copy(internet.buffer(), internet.buffer() + internet.length(), p);
-    if (pcap_sendpacket(d_handle.get(), packet.data(), packet.size())) {
-        return -1;
-    }
-
-    return 0;
 }
 
 }  // close namespace 'trammel'

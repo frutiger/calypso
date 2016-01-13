@@ -14,13 +14,11 @@ add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
 target_include_directories(hauberk PUBLIC standalones/hauberk)
 
 add_library(trammel standalones/trammel/trammel_address.cpp
-                    standalones/trammel/trammel_capture.cpp
                     standalones/trammel/trammel_duplex.cpp
                     standalones/trammel/trammel_interface.cpp
                     standalones/trammel/trammel_interfacesutil.cpp
                     standalones/trammel/trammel_iterator.cpp
-                    standalones/trammel/trammel_list.cpp
-                    standalones/trammel/trammel_send.cpp)
+                    standalones/trammel/trammel_list.cpp)
 target_include_directories(trammel PUBLIC standalones/trammel)
 target_link_libraries(trammel hauberk maxwell -lpcap)
 

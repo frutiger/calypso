@@ -53,7 +53,11 @@ class Resolver {
         // TBD: contract
 
     // MANIPULATORS
-    int open(std::ostream& errorStream);
+    int open(std::ostream&         errorStream,
+             int                   timeoutMilliseconds,
+             int                   snapshotLength,
+             int                   nonblock,
+             const maxwell::Queue& queue);
         // TBD: contract
 
     int resolve(const hauberk::Internet&  internet,

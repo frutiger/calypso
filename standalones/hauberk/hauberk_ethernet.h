@@ -19,6 +19,14 @@ namespace hauberk {
                                // ==============
 
 class Ethernet {
+  public:
+    // TYPES
+    enum class Type : std::uint16_t {
+        INTERNET = 0x0800,
+        ARP      = 0x0806,
+    };
+
+  private:
     // DATA
     const std::uint8_t *d_buffer;
 
@@ -36,7 +44,7 @@ class Ethernet {
     const Address sourceAddress() const;
         // TBD: contract
 
-    std::uint16_t packetLength() const;
+    Type type() const;
         // TBD: contract
 
     const std::uint8_t *payload() const;
@@ -44,7 +52,6 @@ class Ethernet {
 
     std::uint32_t frameCheckSequence() const;
         // TBD: contract
-
 };
 
 }  // close namespace hauberk
