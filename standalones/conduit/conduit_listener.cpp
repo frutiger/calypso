@@ -7,6 +7,7 @@
 #include <array>
 #include <cassert>
 #include <ostream>
+#include <iostream>
 
 namespace conduit {
 
@@ -28,6 +29,7 @@ int Listener::packetsReady()
     trammel::CaptureMetadata *metadata;
     const uint8_t            *data;
     while (!d_capture.read(&metadata, &data)) {
+        std::cout << metadata.dataLength() << '\n';
     }
     return 0;
 }

@@ -4,8 +4,6 @@
 #include <maxwell_queue.h>
 
 #include <array>
-#include <cassert>
-#include <iostream>
 
 #include <sys/event.h>
 

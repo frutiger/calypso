@@ -3,6 +3,7 @@
 #define TRAMMEL_ADDRESS
 
 #ifndef INCLUDED_MEMORY
+#define INCLUDED_MEMORY
 #include <memory>
 #endif
 
