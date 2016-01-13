@@ -69,8 +69,9 @@ Capture::ActivationError Capture::toActivationError(int error)
             return ActivationError::WarningPromiscuousNotSupported;
         case PCAP_WARNING_TSTAMP_TYPE_NOTSUP:
             return ActivationError::WarningTimestampNotSupported;
+        default:
+            return ActivationError::Unknown;
     }
-    return ActivationError::Unknown;
 }
 
 // CREATORS
@@ -99,10 +100,19 @@ int Capture::activate(ActivationError *error)
     return 0;
 }
 
-int Capture::dataLinkType()
+Capture::LinkType Capture::linkType()
 {
     assert(d_activated);
-    return pcap_datalink(d_handle.get());
+    switch (pcap_datalink(d_handle.get())) {
+      case DLT_NULL:
+        return LinkType::Loopback;
+
+      case DLT_EN10MB:
+        return LinkType::Ethernet;
+
+      default:
+        return LinkType::Unknown;
+    }
 }
 
 int Capture::fileDescriptor(std::uintptr_t *fileDescriptor)
@@ -146,7 +156,8 @@ int Capture::setNonblock(int nonblock, std::string *error)
     return 0;
 }
 
-int Capture::read(CaptureMetadata **metadata, const uint8_t **capturedData)
+int Capture::read(const CaptureMetadata **metadata,
+                  const uint8_t         **capturedData)
 {
     struct pcap_pkthdr *header;
     if (pcap_next_ex(d_handle.get(), &header, capturedData) != 1) {

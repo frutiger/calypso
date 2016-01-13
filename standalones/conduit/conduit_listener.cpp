@@ -3,10 +3,16 @@
 #include <conduit_listener.h>
 
 #include <maxwell_queue.h>
+#include <hauberk_internet.h>
+#include <hauberk_loopback.h>
 
 #include <array>
 #include <cassert>
 #include <ostream>
+
+#include <sys/socket.h>
+
+#include <iostream>
 
 namespace conduit {
 
@@ -21,14 +27,57 @@ int Listener::dispatchEvent(std::uintptr_t, void *userData)
 }
 
 // MODIFIERS
+int Listener::processLoopbackPacket(const uint8_t *data)
+{
+    hauberk::Loopback loopback(data);
+    if (loopback.protocolFamily() != PF_INET) {
+        return 0;
+    }
+
+    hauberk::Internet internet(loopback.rest());
+    if (internet.version() != 4) {
+        return 0;
+    }
+
+    return 0;
+}
+
+int Listener::processEthernetPacket(const uint8_t *data)
+{
+    uint8_t c = data[0] + 1;
+    c++;
+    return 0;
+}
+
+int Listener::processPacket(const trammel::CaptureMetadata *metadata,
+                            const uint8_t                  *data)
+{
+    if (metadata->capturedDataLength() != metadata->dataLength()) {
+        return -1;
+    }
+
+    switch (d_linkType) {
+      case trammel::Capture::LinkType::Loopback:
+        return processLoopbackPacket(data);
+
+      case trammel::Capture::LinkType::Ethernet:
+        return processEthernetPacket(data);
+
+      case trammel::Capture::LinkType::Unknown:
+        return -1;
+    }
+}
+
 int Listener::packetsReady()
 {
     assert(d_activated);
 
-    trammel::CaptureMetadata *metadata;
-    const uint8_t            *data;
+    const trammel::CaptureMetadata *metadata;
+    const uint8_t                  *data;
     while (!d_capture.read(&metadata, &data)) {
-        // TBD: process packet
+        if (processPacket(metadata, data)) {
+            return -1;
+        }
     }
     return 0;
 }
@@ -41,7 +90,7 @@ Listener::Listener(const std::string& interface, std::uint32_t address)
 , d_readHandle()
 , d_capture()
 , d_activated()
-, d_dataLinkType()
+, d_linkType()
 {
     // TBD: silence warning
     ++d_address;
@@ -71,7 +120,7 @@ int Listener::activate(std::ostream& errorStream, const maxwell::Queue& queue)
     }
     d_activated = true;
 
-    d_dataLinkType = d_capture.dataLinkType();
+    d_linkType = d_capture.linkType();
     uintptr_t listenDescriptor;
     if (d_capture.fileDescriptor(&listenDescriptor)) {
         errorStream << "Failed to get listener descriptor\n";

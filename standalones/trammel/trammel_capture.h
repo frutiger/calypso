@@ -52,6 +52,7 @@ class Capture {
   public:
     // TYPES
     enum class ActivationError {
+        Unknown,
         Error,
         ErrorAlreadyActivated,
         ErrorInterfaceNotUp,
@@ -62,7 +63,12 @@ class Capture {
         Warning,
         WarningPromiscuousNotSupported,
         WarningTimestampNotSupported,
-        Unknown
+    };
+
+    enum class LinkType {
+        Unknown,
+        Loopback,
+        Ethernet,
     };
 
   private:
@@ -87,7 +93,7 @@ class Capture {
     int activate(ActivationError *error = 0);
         // TBD: contract
 
-    int dataLinkType();
+    LinkType linkType();
         // TBD: contract
 
     int fileDescriptor(std::uintptr_t *fileDescriptor);
@@ -96,7 +102,7 @@ class Capture {
     int open(const std::string& interface, std::string *error = 0);
         // TBD: contract
 
-    int read(CaptureMetadata **metadata, const uint8_t **capturedData);
+    int read(const CaptureMetadata **metadata, const uint8_t **capturedData);
         // TBD: contract
 
     int setNonblock(int nonblock, std::string *error = 0);

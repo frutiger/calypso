@@ -102,7 +102,7 @@ int Queue::setReadHandler(std::ostream&          errorStream,
         return -1;
     }
 
-    *readHandle = std::shared_ptr<void>(handle, 0);
+    *readHandle = std::shared_ptr<void>(handle);
     return 0;
 }
 
@@ -136,3 +136,4 @@ int Queue::start(std::ostream& errorStream) const
 }
 
 }  // close namespace 'maxwell'
+

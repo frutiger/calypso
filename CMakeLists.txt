@@ -2,9 +2,12 @@
 
 cmake_minimum_required(VERSION 3.4)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Werror -Wextra")
 
-add_library(hauberk standalones/hauberk/hauberk_internetaddressutil.cpp
+add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
+                    standalones/hauberk/hauberk_internet.cpp
+                    standalones/hauberk/hauberk_internetaddressutil.cpp
+                    standalones/hauberk/hauberk_loopback.cpp
                     standalones/hauberk/hauberk_socketaddress.cpp)
 target_include_directories(hauberk PUBLIC standalones/hauberk)
 
