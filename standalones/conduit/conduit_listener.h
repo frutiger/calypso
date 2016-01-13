@@ -39,33 +39,15 @@ namespace conduit {
 
 class Listener {
     // DATA
-    std::string                d_interface;
-    std::uint32_t              d_address;
-    maxwell::EventHandler      d_eventHandler;
-    std::shared_ptr<void>      d_readHandle;
-    trammel::Capture           d_capture;
-    bool                       d_activated;
-    trammel::Capture::LinkType d_linkType;
-    Resolver                   d_resolver;
-
-    // PRIVATE CLASS METHODS
-    static int dispatchEvent(std::uintptr_t, void *userData);
+    std::uint32_t   d_address;
+    trammel::Duplex d_duplex;
+    Resolver        d_resolver;
 
     // MODIFIERS
     int processDnsRequest(const hauberk::Internet& internet);
         // TBD: contract
 
-    int processLoopbackPacket(const std::uint8_t *data);
-        // TBD: contract
-
-    int processEthernetPacket(const std::uint8_t *data);
-        // TBD: contract
-
-    int processPacket(const trammel::CaptureMetadata *metadata,
-                      const std::uint8_t              *data);
-        // TBD: contract
-
-    int packetsReady();
+    int processPacket(const hauberk::Internet& internet);
         // TBD: contract
 
   public:

@@ -2,6 +2,10 @@
 #ifndef TRAMMEL_SEND
 #define TRAMMEL_SEND
 
+#ifndef INCLUDED_HAUBERK_ETHERNET
+#include <hauberk_ethernet.h>
+#endif
+
 #ifndef INCLUDED_CSTDINT
 #define INCLUDED_CSTDINT
 #include <cstdint>
@@ -24,6 +28,8 @@
 
 struct pcap;
 
+namespace hauberk { class Internet; }
+
 namespace trammel {
 
                                  // ==========
@@ -32,22 +38,22 @@ namespace trammel {
 
 class Send {
     // DATA
+    std::string                                           d_interface;
+    hauberk::Ethernet::Address                            d_hardwareAddress;
+    int                                                   d_datalinkType;
     std::unique_ptr<struct pcap, void (*)(struct pcap *)> d_handle;
 
   public:
-    // DELETED METHODS
-    Send(const Send&) = delete;
-    Send& operator=(const Send&) = delete;
-
     // CREATORS
-    explicit Send();
+    Send(const std::string&                interface,
+         const hauberk::Ethernet::Address& hardwareAddress);
         // TBD: contract
 
     // MANIPULATORS
-    int open(std::ostream& errorStream, const std::string& interface);
+    int open(std::ostream& errorStream);
         // TBD: contract
 
-    int write(const std::uint8_t *data, std::uint32_t length);
+    int write(const hauberk::Internet& internet);
         // TBD: contract
 };
 

@@ -6,6 +6,10 @@
 
 namespace hauberk {
 
+                               // --------------
+                               // class Loopback
+                               // --------------
+
 // CREATORS
 Loopback::Loopback(const std::uint8_t *buffer)
 : d_buffer(buffer)
@@ -20,7 +24,7 @@ std::uint32_t Loopback::protocolFamily() const
     return result;
 }
 
-const std::uint8_t *Loopback::rest() const
+const std::uint8_t *Loopback::payload() const
 {
     return d_buffer + 4;
 }

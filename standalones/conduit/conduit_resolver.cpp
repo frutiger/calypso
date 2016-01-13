@@ -3,6 +3,7 @@
 #include <conduit_resolver.h>
 
 #include <hauberk_internet.h>
+#include <trammel_duplex.h>
 
 namespace conduit {
 
@@ -14,26 +15,21 @@ namespace conduit {
 Resolver::Resolver(
                 ArgumentParser::InterfaceAddresses::const_iterator endpoint,
                 ArgumentParser::InterfaceAddresses::const_iterator endpointEnd)
-: d_interfaceAddresses(endpoint, endpointEnd)
-, d_endpointDuplexes()
+: d_duplexes()
 {
+    for (; endpoint != endpointEnd; ++endpoint) {
+        d_duplexes.push_back(trammel::Duplex(endpoint->first,
+                                             0));  // TBD: handler
+    }
 }
 
 // MANIPULATORS
 int Resolver::open(std::ostream& errorStream)
 {
-    for (auto interfaceAddress: d_interfaceAddresses) {
-        EndpointDuplex endpointDuplex;
-        endpointDuplex.d_address = interfaceAddress.second;
-        if (endpointDuplex.d_sender.open(errorStream,
-                                         interfaceAddress.first)) {
+    for (auto& duplex: d_duplexes) {
+        if (duplex.open(errorStream)) {
             return -1;
         }
-        if (endpointDuplex.d_receiver.open(errorStream,
-                                           interfaceAddress.first)) {
-            return -1;
-        }
-        d_endpointDuplexes.push_back(std::move(endpointDuplex));
     }
     return 0;
 }
@@ -42,11 +38,7 @@ int Resolver::resolve(const hauberk::Internet&  internet,
                       ResolutionHandler         handler,
                       void                     *userData)
 {
-    for (EndpointDuplexes::size_type i = 0;
-                                     i < d_endpointDuplexes.size();
-                                   ++i) {
-        //d_endpointDuplexes[i].d_sender
-    }
+    return 0;
 }
 
 }  // close namespace 'conduit'

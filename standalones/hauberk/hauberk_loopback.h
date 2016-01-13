@@ -9,6 +9,10 @@
 
 namespace hauberk {
 
+                               // ==============
+                               // class Loopback
+                               // ==============
+
 class Loopback {
     // DATA
     const std::uint8_t *d_buffer;
@@ -21,7 +25,7 @@ class Loopback {
     std::uint32_t protocolFamily() const;
         // TBD: contract
 
-    const std::uint8_t *rest() const;
+    const std::uint8_t *payload() const;
         // TBD: contract
 };
 

@@ -10,6 +10,16 @@
 #include <trammel_send.h>
 #endif
 
+#ifndef INCLUDED_ARRAY
+#define INCLUDED_ARRAY
+#include <array>
+#endif
+
+#ifndef INCLUDED_CSTDINT
+#define INCLUDED_CSTDINT
+#include <cstdint>
+#endif
+
 #ifndef INCLUDED_OSTREAM
 #define INCLUDED_OSTREAM
 #include <ostream>
@@ -20,13 +30,8 @@
 #include <string>
 #endif
 
-#ifndef INCLUDED_TUPLE
-#define INCLUDED_TUPLE
-#include <tuple>
-#endif
-
-namespace hauberk { class Loopback; }
-namespace hauberk { class Ethernet; }
+namespace hauberk { class Internet; }
+namespace maxwell { class Queue;    }
 
 namespace trammel {
 
@@ -35,25 +40,36 @@ namespace trammel {
                                 // ============
 
 class Duplex {
-  public:
-    // TYPES
-    typedef std::tuple<hauberk::Loopback, hauberk::Ethernet> Packet;
-    typedef void (*PacketHandler)(const Packet& packet, void *userData);
-
   private:
     // DATA
-    std::string   d_interface;
-    PacketHandler d_handler;
-    Send          d_sender;
-    Capture       d_receiver;
+    Send    d_sender;
+    Capture d_receiver;
+
+    // PRIVATE CLASS METHODS
+    static int dispatchPacket(const hauberk::Internet&  internet,
+                              void                     *userData);
+        // TBD: contract
+
+    // MODIFIERS
+    int handlePacket(const hauberk::Internet& internet);
+        // TBD: contract
 
   public:
+    // CLASS METHODS
+    static Duplex create(const std::string& interface);
+        // TBD: contract
+
     // CREATORS
-    explicit Duplex(const std::string& interface, PacketHandler handler);
+    explicit Duplex(const std::string&                interface,
+                    const hauberk::Ethernet::Address& hardwareAddress);
         // TBD: contract
 
     // MANIPULATORS
-    int open(std::ostream& errorStream);
+    int open(std::ostream&         errorStream,
+             int                   timeoutMilliseconds,
+             int                   snapshotLength,
+             int                   nonblock,
+             const maxwell::Queue& queue);
         // TBD: contract
 };
 

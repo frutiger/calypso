@@ -40,7 +40,7 @@ class Udp {
     std::uint16_t checksum() const;
         // TBD: contract
 
-    const std::uint8_t *rest() const;
+    const std::uint8_t *payload() const;
         // TBD: contract
 };
 

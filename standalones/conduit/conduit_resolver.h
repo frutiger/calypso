@@ -6,12 +6,8 @@
 #include <conduit_argumentparser.h>
 #endif
 
-#ifndef INCLUDED_TRAMMEL_CAPTURE
-#include <trammel_capture.h>
-#endif
-
-#ifndef INCLUDED_TRAMMEL_SEND
-#include <trammel_send.h>
+#ifndef INCLUDED_TRAMMEL_DUPLEX
+#include <trammel_duplex.h>
 #endif
 
 #ifndef INCLUDED_CSTDINT
@@ -38,17 +34,11 @@ namespace conduit {
                                // ==============
 
 class Resolver {
-    // DATA
-    struct EndpointDuplex {
-        // DATA
-        std::uint32_t    d_address;
-        trammel::Send    d_sender;
-        trammel::Capture d_receiver;
-    };
-    typedef std::vector<EndpointDuplex> EndpointDuplexes;
+    // PRIVATE TYPES
+    typedef std::vector<trammel::Duplex> Duplexes;
 
-    ArgumentParser::InterfaceAddresses d_interfaceAddresses;
-    EndpointDuplexes                   d_endpointDuplexes;
+    // DATA
+    Duplexes d_duplexes;
 
   public:
     // TYPES
@@ -56,10 +46,6 @@ class Resolver {
                                       std::uint32_t             gateway,
                                       const hauberk::Internet&  response,
                                       void                     *userData);
-
-    // DELETED METHODS
-    Resolver(const Resolver&)            = delete;
-    Resolver& operator=(const Resolver&) = delete;
 
     // CREATORS
     Resolver(ArgumentParser::InterfaceAddresses::const_iterator endpoint,

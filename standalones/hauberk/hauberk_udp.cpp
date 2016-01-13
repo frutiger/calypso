@@ -49,7 +49,7 @@ std::uint16_t Udp::checksum() const
     return checksum;
 }
 
-const std::uint8_t *Udp::rest() const
+const std::uint8_t *Udp::payload() const
 {
     return d_buffer + 8;
 }

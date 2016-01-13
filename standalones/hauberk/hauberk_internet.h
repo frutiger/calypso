@@ -26,6 +26,9 @@ class Internet {
         // TBD: contract
 
     // ACCESSORS
+    const std::uint8_t *buffer() const;
+        // TBD: contract
+
     std::uint8_t version() const;
         // TBD: contract
 
@@ -71,7 +74,7 @@ class Internet {
     const std::uint8_t *optionsData() const;
         // TBD: contract
 
-    const std::uint8_t *rest() const;
+    const std::uint8_t *payload() const;
         // TBD: contract
 };
 

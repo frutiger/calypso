@@ -13,6 +13,11 @@ Internet::Internet(const std::uint8_t *buffer)
 }
 
 // ACCESSORS
+const std::uint8_t *Internet::buffer() const
+{
+    return d_buffer;
+}
+
 std::uint8_t Internet::version() const
 {
     std::uint8_t firstByte;
@@ -116,7 +121,7 @@ const std::uint8_t *Internet::optionsData() const
     return d_buffer + 20;
 }
 
-const std::uint8_t *Internet::rest() const
+const std::uint8_t *Internet::payload() const
 {
     return d_buffer + headerLength();
 }

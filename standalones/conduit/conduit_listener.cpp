@@ -22,82 +22,11 @@ namespace conduit {
                                // class Listener
                                // --------------
 
-// PRIVATE CLASS METHODS
-int Listener::dispatchEvent(std::uintptr_t, void *userData)
-{
-    return static_cast<Listener *>(userData)->packetsReady();
-}
-
 // MODIFIERS
 int Listener::processDnsRequest(const hauberk::Internet& internet)
 {
-    d_resolver.resolve
+    //d_resolver.resolve
     std::cout << "dns request from " << internet.sourceAddress() << '\n';
-    return 0;
-}
-
-int Listener::processLoopbackPacket(const std::uint8_t *data)
-{
-    hauberk::Loopback loopback(data);
-    if (loopback.protocolFamily() != PF_INET) {
-        return 0;
-    }
-
-    hauberk::Internet internet(loopback.rest());
-    if (internet.version() != 4) {
-        return 0;
-    }
-
-    if (hauberk::Internet::Protocol(internet.protocol()) ==
-                                            hauberk::Internet::Protocol::UDP) {
-        hauberk::Udp udp(internet.rest());
-        if (hauberk::Udp::Port(udp.destinationPort()) ==
-                                                     hauberk::Udp::Port::DNS) {
-            return processDnsRequest(internet);
-        }
-    }
-
-    return 0;
-}
-
-int Listener::processEthernetPacket(const std::uint8_t *data)
-{
-    // TBD: implement
-    std::uint8_t c = data[0] + 1;
-    c++;
-    return 0;
-}
-
-int Listener::processPacket(const trammel::CaptureMetadata *metadata,
-                            const std::uint8_t             *data)
-{
-    if (metadata->capturedDataLength() != metadata->dataLength()) {
-        return -1;
-    }
-
-    switch (d_linkType) {
-      case trammel::Capture::LinkType::Loopback:
-        return processLoopbackPacket(data);
-
-      case trammel::Capture::LinkType::Ethernet:
-        return processEthernetPacket(data);
-
-      case trammel::Capture::LinkType::Unknown:
-        return -1;
-    }
-}
-
-int Listener::packetsReady()
-{
-    assert(d_activated);
-
-    const trammel::CaptureMetadata *metadata;
-    const std::uint8_t             *data;
-    while (!d_capture.read(&metadata, &data)) {
-        if (processPacket(metadata, data)) {
-            return -1;
-        }
-    }
     return 0;
 }
 
