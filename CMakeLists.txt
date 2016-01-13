@@ -21,7 +21,8 @@ add_library(trammel standalones/trammel/trammel_address.cpp
                     standalones/trammel/trammel_list.cpp
                     standalones/trammel/trammel_send.cpp)
 target_include_directories(hauberk PUBLIC standalones/trammel)
-target_compile_features(trammel PUBLIC cxx_alias_templates)
+target_compile_features(trammel PUBLIC cxx_alias_templates
+                                       cxx_deleted_functions)
 target_link_libraries(trammel hauberk -lpcap)
 
 add_library(conduit standalones/conduit/conduit_listener.cpp
@@ -33,6 +34,7 @@ target_link_libraries(conduit trammel maxwell)
 add_library(maxwell standalones/maxwell/maxwell_eventhandler.cpp
                     standalones/maxwell/maxwell_queue.cpp)
 target_include_directories(maxwell PUBLIC standalones/maxwell)
+target_compile_features(maxwell PUBLIC cxx_deleted_functions)
 
 add_executable(calypso standalones/calypso/calypso.m.cpp)
 target_link_libraries(calypso maxwell conduit trammel hauberk)

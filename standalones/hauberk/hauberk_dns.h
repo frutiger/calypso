@@ -13,8 +13,16 @@ class Dns {
     const std::uint8_t *d_buffer;
 
   public:
+    // CREATORS
     explicit Dns(const std::uint8_t *buffer);
+        // TBD: contract
 
-}  // close namespace 'conduit'
+    // ACCESSORS
+    std::uint16_t transactionId() const;
+        // TBD: contract
+
+    // TBD: add remaining accessors
+
+}  // close namespace 'hauberk'
 
 #endif

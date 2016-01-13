@@ -52,6 +52,10 @@ class Queue {
     };
 
   public:
+    // DELETED METHODS
+    Queue(const Queue&)            = delete;
+    Queue& operator=(const Queue&) = delete;
+
     // CREATORS
     explicit Queue(std::uint64_t waitNanoseconds);
         // TBD: contract

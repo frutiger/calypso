@@ -87,6 +87,10 @@ class Capture {
     CaptureMetadata                                       d_metadata;
 
   public:
+    // DELETED METHODS
+    Capture(const Capture&) = delete;
+    Capture& operator=(const Capture&) = delete;
+
     // CREATORS
     explicit Capture();
         // TBD: contract

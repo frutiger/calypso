@@ -35,6 +35,10 @@ class Send {
     std::unique_ptr<struct pcap, void (*)(struct pcap *)> d_handle;
 
   public:
+    // DELETED METHODS
+    Send(const Send&) = delete;
+    Send& operator=(const Send&) = delete;
+
     // CREATORS
     explicit Send();
         // TBD: contract

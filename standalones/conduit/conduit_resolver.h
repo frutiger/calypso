@@ -2,12 +2,32 @@
 #ifndef CONDUIT_RESOLVER
 #define CONDUIT_RESOLVER
 
+#ifndef INCLUDED_CONDUIT_ARGUMENTPARSER
 #include <conduit_argumentparser.h>
+#endif
+
+#ifndef INCLUDED_TRAMMEL_CAPTURE
 #include <trammel_capture.h>
+#endif
+
+#ifndef INCLUDED_TRAMMEL_SEND
 #include <trammel_send.h>
+#endif
+
+#ifndef INCLUDED_CSTDINT
+#define INCLUDED_CSTDINT
 #include <cstdint>
+#endif
+
+#ifndef INCLUDED_UTILITY
+#define INCLUDED_UTILITY
 #include <utility>
+#endif
+
+#ifndef INCLUDED_VECTOR
+#define INCLUDED_VECTOR
 #include <vector>
+#endif
 
 namespace hauberk { class Internet; }
 
@@ -32,10 +52,8 @@ class Resolver {
 
   public:
     // DELETED METHODS
-    Resolver(const Resolver&)             = delete;
-    Resolver(const Resolver&&)            = delete;
-    Resolver& operator=(const Resolver&)  = delete;
-    Resolver& operator=(const Resolver&&) = delete;
+    Resolver(const Resolver&)            = delete;
+    Resolver& operator=(const Resolver&) = delete;
 
     // CREATORS
     Resolver(ArgumentParser::InterfaceAddresses::const_iterator endpoint,

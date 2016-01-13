@@ -69,6 +69,10 @@ class Listener {
         // TBD: contract
 
   public:
+    // DELETED METHODS
+    Listener(const Listener&) = delete;
+    Listener& operator=(const Listener&) = delete;
+
     // CREATORS
     Listener(const std::string&                                 interface,
              std::uint32_t                                      address,

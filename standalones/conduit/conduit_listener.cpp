@@ -31,6 +31,7 @@ int Listener::dispatchEvent(std::uintptr_t, void *userData)
 // MODIFIERS
 int Listener::processDnsRequest(const hauberk::Internet& internet)
 {
+    d_resolver.resolve
     std::cout << "dns request from " << internet.sourceAddress() << '\n';
     return 0;
 }
