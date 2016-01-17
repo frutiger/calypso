@@ -7,6 +7,11 @@
 #include <cstdint>
 #endif
 
+#ifndef INCLUDED_FUNCTIONAL
+#define INCLUDED_FUNCTIONAL
+#include <functional>
+#endif
+
 #ifndef INCLUDED_OSTREAM
 #define INCLUDED_OSTREAM
 #include <ostream>
@@ -14,27 +19,31 @@
 
 namespace maxwell {
 
-class EventHandler;
-
                                 // ===========
                                 // class Queue
                                 // ===========
 
 class Queue {
+  public:
+    // TYPES
+    typedef std::function<int (std::uintptr_t)> Handler;
+
   private:
     // DATA
     int           d_kernelQueue;
     std::uint64_t d_waitNanoseconds;
 
     // PRIVATE TYPES
+
                           // =======================
                           // class Queue::ReadHandle
                           // =======================
 
     class ReadHandle {
         // DATA
-        int             d_kernelQueue;
-        std::uintptr_t  d_identifer;
+        int                      d_kernelQueue;
+        std::uintptr_t           d_identifer;
+        std::unique_ptr<Handler> d_handler;
 
       public:
         // CREATORS
@@ -45,13 +54,16 @@ class Queue {
             // TBD: contract
 
         // MANIPULATORS
-        int enable(std::ostream&   errorStream,
-                   int             kernelQueue,
-                   std::uintptr_t  identifier,
-                   EventHandler   *eventHandler);
+        int enable(std::ostream&             errorStream,
+                   std::unique_ptr<Handler> *handler,
+                   int                       kernelQueue,
+                   std::uintptr_t            identifier);
     };
 
   public:
+    // TYPES
+    typedef std::shared_ptr<void> Handle;
+
     // DELETED METHODS
     Queue(const Queue&)            = delete;
     Queue& operator=(const Queue&) = delete;
@@ -65,12 +77,13 @@ class Queue {
         // TBD: contract
 
     // ACCESSORS
-    int setReadHandler(std::ostream&          errorStream,
-                       std::shared_ptr<void> *readHandle,
-                       std::uintptr_t         identifier,
-                       EventHandler          *handler) const;
-
     int start(std::ostream& errorStream) const;
+        // TBD: contract
+
+    int setReadHandler(std::ostream&             errorStream,
+                       Handle                   *handle,
+                       std::unique_ptr<Handler> *handler,
+                       std::uintptr_t            identifier) const;
         // TBD: contract
 };
 

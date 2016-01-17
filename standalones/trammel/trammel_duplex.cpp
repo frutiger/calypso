@@ -2,10 +2,9 @@
 
 #include <trammel_duplex.h>
 
-#include <hauberk_bufferutil.h>
-#include <hauberk_internet.h>
-#include <hauberk_loopback.h>
-#include <maxwell_queue.h>
+#include <hauberk_arputil.h>
+#include <hauberk_ethernetutil.h>
+#include <hauberk_loopbackutil.h>
 
 #include <cassert>
 #include <random>
@@ -14,51 +13,54 @@
 
 namespace trammel {
 
-namespace {
-static const std::uint32_t PROTOCOL_FAMILY_INTERNET = 2;
-}  // close unnamed namespace
-
                                 // ------------
                                 // class Duplex
                                 // ------------
 
-// PRIVATE CLASS METHODS
-int Duplex::dispatchEvent(std::uintptr_t, void *userData)
-{
-    return static_cast<Duplex *>(userData)->packetsReady();
-}
-
 // MODIFIERS
-int Duplex::read(hauberk::Internet *internet)
+int Duplex::read(hauberk::EthernetUtil::Type  *type,
+                 const std::uint8_t          **packetData,
+                 std::size_t                  *packetLength)
 {
     struct pcap_pkthdr *header;
     const std::uint8_t *data;
 
     while (true) {
-        if (pcap_next_ex(d_handle.get(), &header, &data) != 1) {
+        if (pcap_next_ex(d_pcapHandle.get(), &header, &data) != 1) {
             return -1;
         }
 
         // TBD: better error handling
         assert(header->caplen == header->len);
 
-        // TBD: install BPF filter programs instead of checking the packet in
-        // user space
+        typedef hauberk::LoopbackUtil LU;
+        typedef hauberk::EthernetUtil EU;
+
         switch (d_datalinkType) {
           case DLT_NULL: {
-            hauberk::Loopback loopback(data);
-            if (PROTOCOL_FAMILY_INTERNET != loopback.protocolFamily()) {
+            if (LU::Family(LU::protocolFamily(data)) != LU::Family::INTERNET) {
+                // TBD: install BPF filter programs instead of checking the
+                // packet in user space
                 continue;
             }
-            *internet = hauberk::Internet(loopback.payload());
+            *type         = EU::Type::INTERNET;
+            *packetData   = LU::payload(data);
+            // TBD: something less magic?
+            *packetLength = header->caplen - sizeof(LU::Family);
           } break;
 
           case DLT_EN10MB: {
-            hauberk::Ethernet ethernet(data);
-            if (d_hardwareAddress != ethernet.destinationAddress()) {
+            EU::Address destinationAddress;
+            EU::destinationAddress(&destinationAddress, data);
+            if (destinationAddress != d_hardwareAddress) {
+                // TBD: install BPF filter programs instead of checking the
+                // packet in user space
                 continue;
             }
-            *internet = hauberk::Internet(ethernet.payload());
+            *type         = EU::type(data);
+            *packetData   = EU::payload(data);
+            // TBD: something less magic?  Does this include the FCS?
+            *packetLength = header->caplen - 14;
           } break;
         }
 
@@ -68,44 +70,37 @@ int Duplex::read(hauberk::Internet *internet)
     return 0;
 }
 
-int Duplex::packetsReady()
+int Duplex::packetsReady(std::uintptr_t)
 {
-    hauberk::Internet internet(0);
-    while (!read(&internet)) {
-        if (d_packetHandler(internet, d_handlerUserData)) {
+    hauberk::EthernetUtil::Type  packetType;
+    const std::uint8_t          *packetData;
+    std::size_t                  packetLength;
+    while (!read(&packetType, &packetData, &packetLength)) {
+        if (d_packetHandler(packetType, packetData, packetLength)) {
             return -1;
         }
     }
     return 0;
 }
 
-// CLASS METHODS
-Duplex Duplex::create(const std::string&  interface,
-                      PacketHandler       packetHandler,
-                      void               *handlerUserData)
+// CREATORS
+Duplex::Duplex(const std::string&                    interface,
+               const hauberk::EthernetUtil::Address& gatewayHardwareAddress,
+               std::uint32_t                         address,
+               const PacketHandler&                  packetHandler)
+: d_interface(interface)
+, d_address(address)
+, d_hardwareAddress()
+, d_packetHandler(packetHandler)
+, d_pcapHandle(0, &pcap_close)
+, d_datalinkType()
+, d_readHandle()
+, d_gatewayHardwareAddress(gatewayHardwareAddress)
 {
     typedef std::independent_bits_engine<std::mt19937, 8, std::uint8_t> Engine;
 
-    Engine                     engine((std::mt19937(std::random_device()())));
-    hauberk::Ethernet::Address hardwareAddress;
-    std::generate(hardwareAddress.begin(), hardwareAddress.end(), engine);
-    return Duplex(interface, hardwareAddress, packetHandler, handlerUserData);
-}
-
-// CREATORS
-Duplex::Duplex(const std::string&                 interface,
-               const hauberk::Ethernet::Address&  hardwareAddress,
-               PacketHandler                      packetHandler,
-               void                              *handlerUserData)
-: d_interface(interface)
-, d_hardwareAddress(hardwareAddress)
-, d_packetHandler(packetHandler)
-, d_handlerUserData(handlerUserData)
-, d_handle(0, &pcap_close)
-, d_datalinkType()
-, d_eventHandler(&Duplex::dispatchEvent, this)
-, d_readHandle()
-{
+    Engine engine((std::mt19937(std::random_device()())));
+    std::generate(d_hardwareAddress.begin(), d_hardwareAddress.end(), engine);
 }
 
 // MANIPULATORS
@@ -122,24 +117,24 @@ int Duplex::open(std::ostream&         errorStream,
         return -1;
     }
     else {
-        d_handle.reset(capture);
+        d_pcapHandle.reset(capture);
     }
 
-    int timeoutRc = pcap_set_timeout(d_handle.get(), timeoutMilliseconds);
+    int timeoutRc = pcap_set_timeout(d_pcapHandle.get(), timeoutMilliseconds);
     assert(!timeoutRc);
 
-    int snapshotRc = pcap_set_snaplen(d_handle.get(), snapshotLength);
+    int snapshotRc = pcap_set_snaplen(d_pcapHandle.get(), snapshotLength);
     assert(!snapshotRc);
 
     char nonblockErrorBuffer[PCAP_ERRBUF_SIZE];
-    if (pcap_setnonblock(d_handle.get(),
+    if (pcap_setnonblock(d_pcapHandle.get(),
                          nonblock,
                          nonblockErrorBuffer) == -1) {
         errorStream << "Failed to set nonblock: " << nonblockErrorBuffer;
         return -1;
     }
 
-    int activationRc = pcap_activate(d_handle.get());
+    int activationRc = pcap_activate(d_pcapHandle.get());
     if (activationRc) {
         switch (activationRc) {
             case PCAP_ERROR:
@@ -168,47 +163,138 @@ int Duplex::open(std::ostream&         errorStream,
         return -1;
     }
 
-    d_datalinkType = pcap_datalink(d_handle.get());
+    d_datalinkType = pcap_datalink(d_pcapHandle.get());
 
-    int descriptor = pcap_get_selectable_fd(d_handle.get());
+    int descriptor = pcap_get_selectable_fd(d_pcapHandle.get());
     if (descriptor == -1) {
         errorStream << "Failed to get selectable file descriptor";
         return -1;
     }
 
+    auto function = std::bind(&Duplex::packetsReady,
+                              this,
+                              std::placeholders::_1);
+    auto handler  = std::make_unique<maxwell::Queue::Handler>(function);
     if (queue.setReadHandler(errorStream,
                              &d_readHandle,
-                             static_cast<std::uintptr_t>(descriptor),
-                             &d_eventHandler)) {
+                             &handler,
+                             static_cast<std::uintptr_t>(descriptor))) {
+        return -1;
+    }
+
+    switch (d_datalinkType) {
+      case DLT_NULL: {
+      } return 0;
+
+      case DLT_EN10MB: {
+        /*
+        using AU = hauberk::ArpUtil;
+        std::vector<std::uint8_t> arpBuffer(28); // TBD: magic constant
+        AU::setHardwareType(arpBuffer.data(), AU::HardwareType::ETHERNET);
+        AU::setProtocolType(arpBuffer.data(), AU::ProtocolType::INTERNET);
+        AU::setHardwareAddressLength(arpBuffer.data(), sizeof(AU::Address));
+        AU::setProtocolAddressLength(arpBuffer.data(), sizeof(std::uint32_t));
+        AU::setOperation(arpBuffer.data(), AU::Operation::REQUEST);
+        AU::setSenderHardwareAddress(arpBuffer.data(), d_hardwareAddress);
+        AU::setSenderProtocolAddress(arpBuffer.data(), 0x0100007f);
+        // skipping target hardware address
+        AU::setTargetProtocolAddress(arpBuffer.data(), d_address);
+        if (broadcast(hauberk::EthernetUtil::Type::ARP,
+                      arpBuffer.data(),
+                      arpBuffer.size())) {
+            errorStream << "Failed to send ARP request\n";
+            return -1;
+        }
+        */
+      } return 0;
+
+      default: {
+        errorStream << "Unsupported data link type: " << d_datalinkType
+                    << '\n';
+      } return -1;
+    }
+}
+
+int Duplex::send(hauberk::EthernetUtil::Type  packetType,
+                 const std::uint8_t          *packetData,
+                 std::size_t                  packetLength)
+{
+    std::vector<std::uint8_t> buffer;
+
+    switch (d_datalinkType) {
+      case DLT_NULL: {
+        if (packetType != hauberk::EthernetUtil::Type::INTERNET) {
+            // TBD: diagnostic?
+            return -1;
+        }
+
+        typedef hauberk::LoopbackUtil LU;
+        // TBD: introduce constant from LU
+        buffer.resize(sizeof(LU::Family) + packetLength);
+        LU::setProtocolFamily(buffer.data(), LU::Family::INTERNET);
+        LU::copyPayload(buffer.data(), packetData, packetLength);
+
+      } break;
+
+      case DLT_EN10MB: {
+        typedef hauberk::EthernetUtil EU;
+        // TBD: introduce constant from EU
+        buffer.resize(14 + packetLength);
+        EU::setDestinationAddress(buffer.data(), d_gatewayHardwareAddress);
+        EU::setSourceAddress(buffer.data(), d_hardwareAddress);
+        EU::setType(buffer.data(), packetType);
+        EU::copyPayload(buffer.data(), packetData, packetLength);
+        // TBD: frame check sequence?
+      } break;
+
+      default:
+        return -1;
+    }
+
+    if (pcap_sendpacket(d_pcapHandle.get(), buffer.data(), buffer.size())) {
         return -1;
     }
 
     return 0;
 }
 
-int Duplex::send(const hauberk::Internet& internet)
+int Duplex::broadcast(hauberk::EthernetUtil::Type  packetType,
+                      const std::uint8_t          *packetData,
+                      std::size_t                  packetLength)
 {
-    typedef std::vector<std::uint8_t> Data;
+    std::vector<std::uint8_t> buffer;
 
-    Data               packet;
-    Data::iterator p = packet.begin();
-    if (!d_hardwareAddress.empty()) {
-        packet.reserve(d_hardwareAddress.size() + internet.length());
-        p = std::copy(d_hardwareAddress.begin(), d_hardwareAddress.end(), p);
-    }
-    else {
-        packet.reserve(sizeof(PROTOCOL_FAMILY_INTERNET) + internet.length());
-        hauberk::BufferUtil::copy(packet.data(),
-                                  PROTOCOL_FAMILY_INTERNET);
-        p = p + sizeof(PROTOCOL_FAMILY_INTERNET);
+    switch (d_datalinkType) {
+      case DLT_NULL:
+        // Broadcast is only supported on ethernet
+        return -1;
+
+      case DLT_EN10MB: {
+        typedef hauberk::EthernetUtil EU;
+
+        buffer.resize(14 + packetLength);
+        EU::setDestinationAddress(buffer.data(),
+                                  {{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }});
+        EU::setSourceAddress(buffer.data(), d_hardwareAddress);
+        EU::setType(buffer.data(), packetType);
+        EU::copyPayload(buffer.data(), packetData, packetLength);
+      } break;
+
+      default:
+        return -1;
     }
 
-    p = std::copy(internet.buffer(), internet.buffer() + internet.length(), p);
-    if (pcap_sendpacket(d_handle.get(), packet.data(), packet.size())) {
+    if (pcap_sendpacket(d_pcapHandle.get(), buffer.data(), buffer.size())) {
         return -1;
     }
 
     return 0;
+}
+
+// ACCESSORS
+std::uint32_t Duplex::address() const
+{
+    return d_address;
 }
 
 }  // close namespace 'trammel'

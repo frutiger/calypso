@@ -3,10 +3,9 @@
 #include <conduit_listener.h>
 
 #include <maxwell_queue.h>
-#include <hauberk_internet.h>
+#include <hauberk_internetutil.h>
 #include <hauberk_internetaddressutil.h>
-#include <hauberk_loopback.h>
-#include <hauberk_udp.h>
+#include <hauberk_udputil.h>
 
 #include <array>
 #include <cassert>
@@ -22,28 +21,46 @@ namespace conduit {
                                // class Listener
                                // --------------
 
-// PRIVATE CLASS METHODS
-int Listener::dispatchPacket(const hauberk::Internet&  internet,
-                             void                     *userData)
-{
-    return static_cast<Listener *>(userData)->processPacket(internet);
-}
-
 // MODIFIERS
-int Listener::processDnsRequest(const hauberk::Internet& internet)
+int Listener::processDnsResponse(const std::uint8_t *packetData,
+                                 std::size_t         packetLength,
+                                 std::uint32_t       gateway)
 {
-    //d_resolver.resolve
+    std::cout << "got response from " << gateway << ": ";
+    std::for_each(packetData,
+                  packetData + packetLength,
+                  [](std::uint8_t octet) { std::cout << (int)octet << ' '; });
+    std::cout << '\n';
     return 0;
 }
 
-int Listener::processPacket(const hauberk::Internet& internet)
+int Listener::processDnsRequest(const std::uint8_t *request,
+                                std::size_t         requestLength)
 {
-    if (hauberk::Internet::Protocol(internet.protocol()) ==
-                                            hauberk::Internet::Protocol::UDP) {
-        hauberk::Udp udp(internet.payload());
-        if (hauberk::Udp::Port(udp.destinationPort()) ==
-                                                     hauberk::Udp::Port::DNS) {
-            return processDnsRequest(internet);
+    return d_resolver.resolve(request,
+                              requestLength,
+                              std::bind(&Listener::processDnsResponse,
+                                        this,
+                                        std::placeholders::_1,
+                                        std::placeholders::_2,
+                                        std::placeholders::_3));
+}
+
+int Listener::processPacket(hauberk::EthernetUtil::Type  type,
+                            const std::uint8_t          *packetData,
+                            std::size_t                  packetLength)
+{
+    typedef hauberk::InternetUtil IU;
+    typedef hauberk::UdpUtil      UU;
+
+    if (type != hauberk::EthernetUtil::Type::INTERNET) {
+        return 0;
+    }
+
+    if (IU::Protocol(IU::protocol(packetData)) == IU::Protocol::UDP) {
+        const std::uint8_t *udp = IU::payload(packetData);
+        if (UU::Port(UU::destinationPort(udp)) == UU::Port::DNS) {
+            return processDnsRequest(packetData, packetLength);
         }
     }
     return 0;
@@ -51,14 +68,17 @@ int Listener::processPacket(const hauberk::Internet& internet)
 
 // CREATORS
 Listener::Listener(
-              const std::string&                                 interface,
-              std::uint32_t                                      address,
-              ArgumentParser::InterfaceAddresses::const_iterator endpoint,
-              ArgumentParser::InterfaceAddresses::const_iterator endpointEnd)
-: d_address(address)
-, d_duplex(trammel::Duplex::create(interface,
-                                   &Listener::dispatchPacket,
-                                   this))
+            const ArgumentParser::InterfaceAddresses::value_type& listener,
+            ArgumentParser::InterfaceAddresses::const_iterator    endpoint,
+            ArgumentParser::InterfaceAddresses::const_iterator    endpointEnd)
+: d_duplex(std::get<0>(listener),
+           std::get<1>(listener),
+           std::get<2>(listener),
+           std::bind(&Listener::processPacket,
+                     this,
+                     std::placeholders::_1,
+                     std::placeholders::_2,
+                     std::placeholders::_3))
 , d_resolver(endpoint, endpointEnd)
 {
 }
@@ -70,9 +90,9 @@ int Listener::open(std::ostream& errorStream, const maxwell::Queue& queue)
         return -1;
     }
 
-    //if (d_resolver.open(errorStream, 10, 65536, true, queue)) {
-        //return -1;
-    //}
+    if (d_resolver.open(errorStream, 10, 65536, true, queue)) {
+        return -1;
+    }
 
     return 0;
 }

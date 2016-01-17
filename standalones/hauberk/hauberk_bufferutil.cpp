@@ -61,5 +61,15 @@ void BufferUtil::toHostOrder(std::uint32_t *value)
     *value = ntohl(*value);
 }
 
+void BufferUtil::toNetworkOrder(std::uint16_t *value)
+{
+    *value = htons(*value);
+}
+
+void BufferUtil::toNetworkOrder(std::uint32_t *value)
+{
+    *value = htonl(*value);
+}
+
 }  // close namespace 'hauberk'
 

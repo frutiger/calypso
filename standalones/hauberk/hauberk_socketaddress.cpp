@@ -2,8 +2,8 @@
 
 #include <hauberk_socketaddress.h>
 
-#include <algorithm>
-
+#include <sys/types.h>
+#include <net/if_dl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -28,12 +28,27 @@ bool SocketAddress::isInternet() const
 
 std::uint32_t SocketAddress::theInternet() const
 {
-    struct sockaddr_in internet;
-    std::copy_n(static_cast<const char *>(static_cast<const void *>(
-                                                             d_address.get())),
-                sizeof(sockaddr_in),
-                static_cast<char *>(static_cast<void *>(&internet)));
-    return internet.sin_addr.s_addr;
+    const struct sockaddr_in *internet =
+                     static_cast<const struct sockaddr_in *>(
+                     static_cast<const void               *>(d_address.get()));
+    return internet->sin_addr.s_addr;
+}
+
+bool SocketAddress::isLink() const
+{
+    return d_address->sa_family == AF_LINK;
+}
+
+EthernetUtil::Address SocketAddress::theLink() const
+{
+    EthernetUtil::Address address;
+    const struct sockaddr_dl *datalink =
+                     static_cast<const struct sockaddr_dl *>(
+                     static_cast<const void               *>(d_address.get()));
+    std::copy(LLADDR(datalink),
+              LLADDR(datalink) + datalink->sdl_alen,
+              address.begin());
+    return address;
 }
 
 }  // close namespace 'hauberk'

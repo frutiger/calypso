@@ -61,8 +61,10 @@ int ArgumentParser::toInterfaces(std::ostream&                   errorStream,
 
     result->clear();
     for (auto address: addresses) {
-        std::string interfaceName;
+        std::string                    interfaceName;
+        hauberk::EthernetUtil::Address gatewayHardwareAddress;
         if (trammel::InterfacesUtil::fromAddress(&interfaceName,
+                                                 &gatewayHardwareAddress,
                                                  address.second,
                                                  interfaces)) {
             errorStream << "Could not find " << address.first << " on any "
@@ -70,7 +72,9 @@ int ArgumentParser::toInterfaces(std::ostream&                   errorStream,
             usage(errorStream, programName);
             return -1;
         }
-        result->push_back({interfaceName, address.second});
+        result->push_back({interfaceName,
+                           gatewayHardwareAddress,
+                           address.second});
     }
     return 0;
 }

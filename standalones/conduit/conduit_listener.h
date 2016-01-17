@@ -10,10 +10,6 @@
 #include <conduit_resolver.h>
 #endif
 
-#ifndef INCLUDED_MAXWELL_EVENTHANDLER
-#include <maxwell_eventhandler.h>
-#endif
-
 #ifndef INCLUDED_TRAMMEL_DUPLEX
 #include <trammel_duplex.h>
 #endif
@@ -28,7 +24,6 @@
 #include <string>
 #endif
 
-namespace hauberk { class Internet; }
 namespace maxwell { class Queue;    }
 
 namespace conduit {
@@ -39,20 +34,22 @@ namespace conduit {
 
 class Listener {
     // DATA
-    std::uint32_t   d_address;
-    trammel::Duplex d_duplex;
-    Resolver        d_resolver;
-
-    // PRIVATE CLASS METHODS
-    static int dispatchPacket(const hauberk::Internet&  internet,
-                              void                     *userData);
-        // TBD: contract
+    trammel::Duplex               d_duplex;
+    Resolver                      d_resolver;
 
     // MODIFIERS
-    int processDnsRequest(const hauberk::Internet& internet);
+    int processDnsResponse(const std::uint8_t *packetData,
+                           std::size_t         packetLength,
+                           std::uint32_t       gateway);
         // TBD: contract
 
-    int processPacket(const hauberk::Internet& internet);
+    int processDnsRequest(const std::uint8_t *request,
+                          std::size_t         requestLength);
+        // TBD: contract
+
+    int processPacket(hauberk::EthernetUtil::Type  type,
+                      const std::uint8_t          *packetData,
+                      std::size_t                  packetLength);
         // TBD: contract
 
   public:
@@ -61,10 +58,10 @@ class Listener {
     Listener& operator=(const Listener&) = delete;
 
     // CREATORS
-    Listener(const std::string&                                 interface,
-             std::uint32_t                                      address,
-             ArgumentParser::InterfaceAddresses::const_iterator endpoint,
-             ArgumentParser::InterfaceAddresses::const_iterator endpointEnd);
+    Listener(
+            const ArgumentParser::InterfaceAddresses::value_type& listener,
+            ArgumentParser::InterfaceAddresses::const_iterator    endpoint,
+            ArgumentParser::InterfaceAddresses::const_iterator    endpointEnd);
         // TBD: contract
 
     // MANIPULATORS

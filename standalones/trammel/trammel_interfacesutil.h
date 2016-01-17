@@ -2,6 +2,10 @@
 #ifndef TRAMMEL_INTERFACESUTIL
 #define TRAMMEL_INTERFACESUTIL
 
+#ifndef INCLUDED_HAUBERK_ETHERNETUTIL
+#include <hauberk_ethernetutil.h>
+#endif
+
 #ifndef INCLUDED_TRAMMEL_LIST
 #include <trammel_list.h>
 #endif
@@ -29,9 +33,10 @@ struct InterfacesUtil {
     static int list(Interfaces *interfaces, std::string *error = 0);
         // TBD: contract
 
-    static int fromAddress(std::string       *interfaceName,
-                           std::uint32_t      target,
-                           const Interfaces&  interfaces);
+    static int fromAddress(std::string                    *interfaceName,
+                           hauberk::EthernetUtil::Address *hardwareAddress,
+                           std::uint32_t                   target,
+                           const Interfaces&               interfaces);
         // TBD: contract
 };
 

@@ -34,9 +34,11 @@ int InterfacesUtil::list(List<const struct pcap_if, Interface> *interfaces,
     return 0;
 }
 
-int InterfacesUtil::fromAddress(std::string       *interfaceName,
-                                std::uint32_t      target,
-                                const Interfaces&  interfaces)
+int InterfacesUtil::fromAddress(
+                               std::string                    *interfaceName,
+                               hauberk::EthernetUtil::Address *hardwareAddress,
+                               std::uint32_t                   target,
+                               const Interfaces&               interfaces)
 {
     using Interfaces = List<const struct pcap_if,   Interface>;
     using Addresses  = List<const struct pcap_addr, Address>;
@@ -45,7 +47,9 @@ int InterfacesUtil::fromAddress(std::string       *interfaceName,
                               end        = Interfaces::iterator();
                               interface != end;
                             ++interface) {
-        Addresses addresses = interface->addresses();
+        Addresses addresses            = interface->addresses();
+        bool      addressFound         = false;
+        bool      hardwareAddressFound = false;
         for (Addresses::iterator address  = interface->addresses().begin(),
                                  end      = Addresses::iterator();
                                  address != end;
@@ -54,7 +58,17 @@ int InterfacesUtil::fromAddress(std::string       *interfaceName,
             if (sendAddress.isInternet() &&
                                          sendAddress.theInternet() == target) {
                 interfaceName->assign(interface->name());
-                return 0;
+                addressFound = true;
+                if (addressFound && hardwareAddressFound) {
+                    return 0;
+                }
+            }
+            else if (sendAddress.isLink()) {
+                *hardwareAddress = sendAddress.theLink();
+                hardwareAddressFound = true;
+                if (addressFound && hardwareAddressFound) {
+                    return 0;
+                }
             }
         }
     }

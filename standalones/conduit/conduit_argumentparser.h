@@ -2,6 +2,10 @@
 #ifndef CONDUIT_ARGUMENTPARSER
 #define CONDUIT_ARGUMENTPARSER
 
+#ifndef INCLUDED_HAUBERK_ETHERNETUTIL
+#include <hauberk_ethernetutil.h>
+#endif
+
 #ifndef INCLUDED_CSTDINT
 #define INCLUDED_CSTDINT
 #include <cstdint>
@@ -37,7 +41,9 @@ struct ArgumentParser {
     // TYPES
     typedef std::pair<std::string, std::uint32_t> ArgumentAddress;
     typedef std::vector<ArgumentAddress>          ArgumentAddresses;
-    typedef std::pair<std::string, std::uint32_t> InterfaceAddress;
+    typedef std::tuple<std::string,
+                       hauberk::EthernetUtil::Address,
+                       std::uint32_t>             InterfaceAddress;
     typedef std::vector<InterfaceAddress>         InterfaceAddresses;
 
     // CLASS METHODS

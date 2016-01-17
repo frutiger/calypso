@@ -1,6 +1,5 @@
 // maxwell_queue.cpp
 
-#include <maxwell_eventhandler.h>
 #include <maxwell_queue.h>
 
 #include <array>
@@ -42,18 +41,22 @@ Queue::ReadHandle::~ReadHandle()
 }
 
 // MANIPULATORS
-int Queue::ReadHandle::enable(std::ostream&   errorStream,
-                              int             kernelQueue,
-                              std::uintptr_t  identifier,
-                              EventHandler   *eventHandler)
+int Queue::ReadHandle::enable(std::ostream&             errorStream,
+                              std::unique_ptr<Handler> *handler,
+                              int                       kernelQueue,
+                              std::uintptr_t            identifier)
 {
+    d_kernelQueue = kernelQueue;
+    d_identifer   = identifier;
+    d_handler     = std::move(*handler);
+
     struct kevent change = {
-        identifier,    // identifier
-        EVFILT_READ,   // filter
-        EV_ADD,        // general flags,
-        0,             // filter flags
-        0,             // filter data
-        eventHandler,  // user data
+        identifier,   // identifier
+        EVFILT_READ,  // filter
+        EV_ADD,       // general flags,
+        0,            // filter flags
+        0,            // filter data
+        &d_handler,   // user data
     };
 
     if (kevent(kernelQueue, &change, 1, 0, 0, 0) == -1) {
@@ -61,9 +64,6 @@ int Queue::ReadHandle::enable(std::ostream&   errorStream,
                     << strerror(errno) << '\n';
         return -1;
     }
-
-    d_kernelQueue = kernelQueue;
-    d_identifer   = identifier;
 
     return 0;
 }
@@ -92,17 +92,17 @@ int Queue::create(std::ostream& errorStream)
 }
 
 // ACCESSORS
-int Queue::setReadHandler(std::ostream&          errorStream,
-                          std::shared_ptr<void> *readHandle,
-                          std::uintptr_t         identifier,
-                          EventHandler          *handler) const
+int Queue::setReadHandler(std::ostream&             errorStream,
+                          Handle                   *readHandle,
+                          std::unique_ptr<Handler> *handler,
+                          std::uintptr_t            identifier) const
 {
     std::shared_ptr<ReadHandle> handle(new ReadHandle);
-    if (handle->enable(errorStream, d_kernelQueue, identifier, handler)) {
+    if (handle->enable(errorStream, handler, d_kernelQueue, identifier)) {
         return -1;
     }
 
-    *readHandle = std::shared_ptr<void>(handle);
+    *readHandle = handle;
     return 0;
 }
 
@@ -125,9 +125,9 @@ int Queue::start(std::ostream& errorStream) const
         }
 
         for (int i = 0; i < numEvents; ++i) {
-            EventHandler *eventHandler = static_cast<EventHandler *>(
-                                                              events[i].udata);
-            if (eventHandler->handle(events[i].ident)) {
+            auto *handler =
+                      static_cast<std::unique_ptr<Handler> *>(events[i].udata);
+            if ((**handler)(events[i].ident)) {
                 errorStream << "User event handler returned error.\n";
                 return -1;
             }

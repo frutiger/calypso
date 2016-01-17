@@ -2,6 +2,10 @@
 #ifndef HAUBERK_SOCKETADDRESS
 #define HAUBERK_SOCKETADDRESS
 
+#ifndef INCLUDED_HAUBERK_ETHERNETUTIL
+#include <hauberk_ethernetutil.h>
+#endif
+
 #ifndef INCLUDED_CSTDINT
 #define INCLUDED_CSTDINT
 #include <cstdint>
@@ -35,6 +39,12 @@ class SocketAddress {
         // TBD: contract
 
     std::uint32_t theInternet() const;
+        // TBD: contract
+
+    bool isLink() const;
+        // TBD: contract
+
+    EthernetUtil::Address theLink() const;
         // TBD: contract
 
     // TBD: extend for other socket address types

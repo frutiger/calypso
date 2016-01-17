@@ -12,6 +12,11 @@
 #include <cstdint>
 #endif
 
+#ifndef INCLUDED_VECTOR
+#define INCLUDED_VECTOR
+#include <vector>
+#endif
+
 namespace hauberk {
 
                              // =================
@@ -19,9 +24,16 @@ namespace hauberk {
                              // =================
 
 struct BufferUtil {
+    // TYPES
+    typedef std::vector<std::uint8_t>::iterator BytesIterator;
+
     // CLASS METHODS
-    template <class DESTINATION, class SOURCE>
-    static void copy(DESTINATION *destination, const SOURCE& source);
+    template <class DESTINATION>
+    static void copy(DESTINATION *destination, const std::uint8_t *buffer);
+        // TBD: contract
+
+    template <class SOURCE>
+    static void copy(std::uint8_t *buffer, const SOURCE& source);
         // TBD: contract
 
     static void reverseBits(std::uint8_t *value);
@@ -33,8 +45,15 @@ struct BufferUtil {
     static void toHostOrder(std::uint32_t *value);
         // TBD: contract
 
+    static void toNetworkOrder(std::uint16_t *value);
+        // TBD: contract
+
+    static void toNetworkOrder(std::uint32_t *value);
+        // TBD: contract
+
     template <class TYPE>
     static TYPE slice(TYPE source, std::uint8_t start, std::uint8_t end);
+        // TBD: contract
 };
 
                              // -----------------
@@ -42,13 +61,20 @@ struct BufferUtil {
                              // -----------------
 
 // CLASS METHODS
-template <class DESTINATION, class SOURCE>
-void BufferUtil::copy(DESTINATION *destination, const SOURCE& source)
+template <class DESTINATION>
+void BufferUtil::copy(DESTINATION *destination, const std::uint8_t *buffer)
 {
-    std::copy_n(static_cast<const std::uint8_t *>(
-                                           static_cast<const void *>(&source)),
-                sizeof(DESTINATION),
-                static_cast<std::uint8_t *>(static_cast<void *>(destination)));
+    auto bufferDestination = static_cast<std::uint8_t *>(
+                             static_cast<void         *>(destination));
+    std::copy(buffer, buffer + sizeof(DESTINATION), bufferDestination);
+}
+
+template <class SOURCE>
+void BufferUtil::copy(std::uint8_t *buffer, const SOURCE& source)
+{
+    auto bufferSource = static_cast<const std::uint8_t *>(
+                        static_cast<const void         *>(&source));
+    std::copy(bufferSource, bufferSource + sizeof(SOURCE), buffer);
 }
 
 template <class TYPE>

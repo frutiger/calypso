@@ -2,15 +2,16 @@
 
 cmake_minimum_required(VERSION 3.4)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -stdlib=libc++ -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -stdlib=libc++ -Wall -Wextra -Werror")
 
 add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
-                    standalones/hauberk/hauberk_ethernet.cpp
-                    standalones/hauberk/hauberk_internet.cpp
+                    standalones/hauberk/hauberk_dnsutil.cpp
+                    standalones/hauberk/hauberk_ethernetutil.cpp
+                    standalones/hauberk/hauberk_internetutil.cpp
                     standalones/hauberk/hauberk_internetaddressutil.cpp
-                    standalones/hauberk/hauberk_loopback.cpp
+                    standalones/hauberk/hauberk_loopbackutil.cpp
                     standalones/hauberk/hauberk_socketaddress.cpp
-                    standalones/hauberk/hauberk_udp.cpp)
+                    standalones/hauberk/hauberk_udputil.cpp)
 target_include_directories(hauberk PUBLIC standalones/hauberk)
 
 add_library(trammel standalones/trammel/trammel_address.cpp
@@ -28,8 +29,7 @@ add_library(conduit standalones/conduit/conduit_listener.cpp
 target_include_directories(conduit PUBLIC standalones/conduit)
 target_link_libraries(conduit trammel maxwell)
 
-add_library(maxwell standalones/maxwell/maxwell_eventhandler.cpp
-                    standalones/maxwell/maxwell_queue.cpp)
+add_library(maxwell standalones/maxwell/maxwell_queue.cpp)
 target_include_directories(maxwell PUBLIC standalones/maxwell)
 
 add_executable(calypso standalones/calypso/calypso.m.cpp)

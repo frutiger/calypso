@@ -15,17 +15,25 @@
 #include <cstdint>
 #endif
 
-#ifndef INCLUDED_UTILITY
-#define INCLUDED_UTILITY
-#include <utility>
+#ifndef INCLUDED_FUNCTIONAL
+#define INCLUDED_FUNCTIONAL
+#include <functional>
+#endif
+
+#ifndef INCLUDED_RANDOM
+#define INCLUDED_RANDOM
+#include <random>
+#endif
+
+#ifndef INCLUDED_UNORDERED_MAP
+#define INCLUDED_UNORDERED_MAP
+#include <unordered_map>
 #endif
 
 #ifndef INCLUDED_VECTOR
 #define INCLUDED_VECTOR
 #include <vector>
 #endif
-
-namespace hauberk { class Internet; }
 
 namespace conduit {
 
@@ -34,19 +42,34 @@ namespace conduit {
                                // ==============
 
 class Resolver {
-    // PRIVATE TYPES
-    typedef std::vector<trammel::Duplex> Duplexes;
-
-    // DATA
-    Duplexes d_duplexes;
-
   public:
     // TYPES
-    typedef void (*ResolutionHandler)(const hauberk::Internet&  request,
-                                      std::uint32_t             gateway,
-                                      const hauberk::Internet&  response,
-                                      void                     *userData);
+    typedef std::function<int (const std::uint8_t *packetData,
+                               std::size_t         packetLength,
+                               std::uint32_t       gateway)> Handler;
 
+  private:
+    // PRIVATE TYPES
+    typedef std::vector<trammel::Duplex>              Duplexes;
+    typedef std::independent_bits_engine<std::mt19937, 16, std::uint16_t>
+                                                      Engine;
+    typedef std::tuple<std::uint16_t, std::uint32_t, Handler>
+                                                      Transaction;
+    typedef std::unordered_map<std::uint16_t, Transaction>
+                                                      Transactions;
+
+    // DATA
+    Duplexes     d_duplexes;
+    Engine       d_engine;
+    Transactions d_transactions;
+
+    // MODIFIERS
+    int processPacket(hauberk::EthernetUtil::Type  type,
+                      const std::uint8_t          *packetData,
+                      std::size_t                  packetLength);
+        // TBD: contract
+
+  public:
     // CREATORS
     Resolver(ArgumentParser::InterfaceAddresses::const_iterator endpoint,
              ArgumentParser::InterfaceAddresses::const_iterator endpointEnd);
@@ -60,9 +83,9 @@ class Resolver {
              const maxwell::Queue& queue);
         // TBD: contract
 
-    int resolve(const hauberk::Internet&  internet,
-                ResolutionHandler         handler,
-                void                     *userData);
+    int resolve(const std::uint8_t *request,
+                std::size_t         requestLength,
+                const Handler&      handler);
         // TBD: contract
 };
 

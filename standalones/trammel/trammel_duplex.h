@@ -2,12 +2,12 @@
 #ifndef TRAMMEL_DUPLEX
 #define TRAMMEL_DUPLEX
 
-#ifndef INCLUDED_HAUBERK_ETHERNET
-#include <hauberk_ethernet.h>
+#ifndef INCLUDED_HAUBERK_ETHERNETUTIL
+#include <hauberk_ethernetutil.h>
 #endif
 
-#ifndef INCLUDED_MAXWELL_EVENTHANDLER
-#include <maxwell_eventhandler.h>
+#ifndef INCLUDED_MAXWELL_QUEUE
+#include <maxwell_queue.h>
 #endif
 
 #ifndef INCLUDED_ARRAY
@@ -18,6 +18,11 @@
 #ifndef INCLUDED_CSTDINT
 #define INCLUDED_CSTDINT
 #include <cstdint>
+#endif
+
+#ifndef INCLUDED_FUNCTIONAL
+#define INCLUDED_FUNCTIONAL
+#include <functional>
 #endif
 
 #ifndef INCLUDED_OSTREAM
@@ -32,9 +37,6 @@
 
 struct pcap;
 
-namespace hauberk { class Internet; }
-namespace maxwell { class Queue;    }
-
 namespace trammel {
 
                                 // ============
@@ -44,42 +46,40 @@ namespace trammel {
 class Duplex {
   public:
     // TYPES
-    typedef int (*PacketHandler)(const hauberk::Internet&  internet,
-                                 void                     *userData);
+    typedef std::function<int (hauberk::EthernetUtil::Type  packetType,
+                               const std::uint8_t          *packetData,
+                               std::size_t                  packetLength)>
+                                                                 PacketHandler;
 
   private:
-    // DATA
-    std::string                                            d_interface;
-    hauberk::Ethernet::Address                             d_hardwareAddress;
-    PacketHandler                                          d_packetHandler;
-    void                                                  *d_handlerUserData;
-    std::unique_ptr<struct pcap, void (*)(struct pcap *)>  d_handle;
-    int                                                    d_datalinkType;
-    maxwell::EventHandler                                  d_eventHandler;
-    std::shared_ptr<void>                                  d_readHandle;
+    // PRIVATE TYPES
+    typedef std::unique_ptr<struct pcap, void (*)(struct pcap *)> Pcap;
 
-    // PRIVATE CLASS METHOD
-    static int dispatchEvent(std::uintptr_t, void *userData);
+    // DATA
+    std::string                    d_interface;
+    std::uint32_t                  d_address;
+    hauberk::EthernetUtil::Address d_hardwareAddress;
+    PacketHandler                  d_packetHandler;
+    Pcap                           d_pcapHandle;
+    int                            d_datalinkType;
+    maxwell::Queue::Handle         d_readHandle;
+    hauberk::EthernetUtil::Address d_gatewayHardwareAddress;
 
     // MODIFIERS
-    int read(hauberk::Internet *internet);
+    int read(hauberk::EthernetUtil::Type  *type,
+             const std::uint8_t          **packetData,
+             std::size_t                  *packetLength);
         // TBD: contract
 
-    int packetsReady();
+    int packetsReady(std::uintptr_t);
         // TBD: contract
 
   public:
-    // CLASS METHODS
-    static Duplex create(const std::string&  interface,
-                         PacketHandler       packetHandler,
-                         void               *handlerUserData);
-        // TBD: contract
-
     // CREATORS
-    explicit Duplex(const std::string&                 interface,
-                    const hauberk::Ethernet::Address&  hardwareAddress,
-                    PacketHandler                      packetHandler,
-                    void                              *handlerUserData);
+    Duplex(const std::string&                    interface,
+           const hauberk::EthernetUtil::Address& gatewayHardwareAddress,
+           std::uint32_t                         address,
+           const PacketHandler&                  packetHandler);
         // TBD: contract
 
     // MANIPULATORS
@@ -90,7 +90,18 @@ class Duplex {
              const maxwell::Queue& queue);
         // TBD: contract
 
-    int send(const hauberk::Internet& internet);
+    int send(hauberk::EthernetUtil::Type  packetType,
+             const std::uint8_t          *packetData,
+             std::size_t                  packetLength);
+        // TBD: contract
+
+    int broadcast(hauberk::EthernetUtil::Type  packetType,
+                  const std::uint8_t          *packetData,
+                  std::size_t                  packetLength);
+        // TBD: contract
+
+    // ACCESSORS
+    std::uint32_t address() const;
         // TBD: contract
 };
 
