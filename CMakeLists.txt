@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.4)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -stdlib=libc++ -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++14 -stdlib=libc++ -Wall -Wextra -Werror")
 
 add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
                     standalones/hauberk/hauberk_dnsutil.cpp
@@ -23,9 +23,9 @@ add_library(trammel standalones/trammel/trammel_address.cpp
 target_include_directories(trammel PUBLIC standalones/trammel)
 target_link_libraries(trammel hauberk maxwell -lpcap)
 
-add_library(conduit standalones/conduit/conduit_listener.cpp
-                    standalones/conduit/conduit_resolver.cpp
-                    standalones/conduit/conduit_argumentparser.cpp)
+add_library(conduit standalones/conduit/conduit_argumentutil.cpp
+                    standalones/conduit/conduit_listener.cpp
+                    standalones/conduit/conduit_resolver.cpp)
 target_include_directories(conduit PUBLIC standalones/conduit)
 target_link_libraries(conduit trammel maxwell)
 

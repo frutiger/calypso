@@ -16,16 +16,13 @@ namespace trammel {
                             // --------------------
 
 // CLASS METHODS
-int InterfacesUtil::list(List<const struct pcap_if, Interface> *interfaces,
-                         std::string                           *error)
+int InterfacesUtil::list(std::ostream& errorStream, Interfaces *interfaces)
 {
     pcap_if_t *device;
     char       errorBuffer[PCAP_ERRBUF_SIZE];
 
     if (pcap_findalldevs(&device, errorBuffer)) {
-        if (error) {
-            error->assign(errorBuffer);
-        }
+        errorStream << "Failed to list interfaces: " << errorBuffer << "\n\n";
         return -1;
     }
 
@@ -34,11 +31,9 @@ int InterfacesUtil::list(List<const struct pcap_if, Interface> *interfaces,
     return 0;
 }
 
-int InterfacesUtil::fromAddress(
-                               std::string                    *interfaceName,
-                               hauberk::EthernetUtil::Address *hardwareAddress,
-                               std::uint32_t                   target,
-                               const Interfaces&               interfaces)
+int InterfacesUtil::fromAddress(std::string       *interfaceName,
+                                std::uint32_t      target,
+                                const Interfaces&  interfaces)
 {
     using Interfaces = List<const struct pcap_if,   Interface>;
     using Addresses  = List<const struct pcap_addr, Address>;
@@ -48,8 +43,6 @@ int InterfacesUtil::fromAddress(
                               interface != end;
                             ++interface) {
         Addresses addresses            = interface->addresses();
-        bool      addressFound         = false;
-        bool      hardwareAddressFound = false;
         for (Addresses::iterator address  = interface->addresses().begin(),
                                  end      = Addresses::iterator();
                                  address != end;
@@ -58,17 +51,7 @@ int InterfacesUtil::fromAddress(
             if (sendAddress.isInternet() &&
                                          sendAddress.theInternet() == target) {
                 interfaceName->assign(interface->name());
-                addressFound = true;
-                if (addressFound && hardwareAddressFound) {
-                    return 0;
-                }
-            }
-            else if (sendAddress.isLink()) {
-                *hardwareAddress = sendAddress.theLink();
-                hardwareAddressFound = true;
-                if (addressFound && hardwareAddressFound) {
-                    return 0;
-                }
+                return 0;
             }
         }
     }

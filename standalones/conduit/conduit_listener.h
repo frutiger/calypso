@@ -2,8 +2,8 @@
 #ifndef CONDUIT_LISTENER
 #define CONDUIT_LISTENER
 
-#ifndef INCLUDED_CONDUIT_ARGUMENTPARSER
-#include <conduit_argumentparser.h>
+#ifndef INCLUDED_CONDUIT_ARGUMENTUTIL
+#include <conduit_argumentutil.h>
 #endif
 
 #ifndef INCLUDED_CONDUIT_RESOLVER
@@ -34,8 +34,8 @@ namespace conduit {
 
 class Listener {
     // DATA
-    trammel::Duplex               d_duplex;
-    Resolver                      d_resolver;
+    trammel::Duplex d_duplex;
+    Resolver        d_resolver;
 
     // MODIFIERS
     int processDnsResponse(const std::uint8_t *packetData,
@@ -58,10 +58,9 @@ class Listener {
     Listener& operator=(const Listener&) = delete;
 
     // CREATORS
-    Listener(
-            const ArgumentParser::InterfaceAddresses::value_type& listener,
-            ArgumentParser::InterfaceAddresses::const_iterator    endpoint,
-            ArgumentParser::InterfaceAddresses::const_iterator    endpointEnd);
+    Listener(const ArgumentUtil::Simplex&           simplex,
+             ArgumentUtil::Duplexes::const_iterator duplex,
+             ArgumentUtil::Duplexes::const_iterator duplexEnd);
         // TBD: contract
 
     // MANIPULATORS

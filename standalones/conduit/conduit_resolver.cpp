@@ -61,9 +61,8 @@ int Resolver::processPacket(hauberk::EthernetUtil::Type  type,
 }
 
 // CREATORS
-Resolver::Resolver(
-               ArgumentParser::InterfaceAddresses::const_iterator endpoint,
-               ArgumentParser::InterfaceAddresses::const_iterator endpointEnd)
+Resolver::Resolver(ArgumentUtil::Duplexes::const_iterator duplex,
+                   ArgumentUtil::Duplexes::const_iterator duplexEnd)
 : d_duplexes()
 , d_engine((std::mt19937(std::random_device()())))
 , d_transactions()
@@ -74,10 +73,10 @@ Resolver::Resolver(
                                                       std::placeholders::_1,
                                                       std::placeholders::_2,
                                                       std::placeholders::_3);
-    for (; endpoint != endpointEnd; ++endpoint) {
-        d_duplexes.emplace_back(std::get<0>(*endpoint),
-                                std::get<1>(*endpoint),
-                                std::get<2>(*endpoint),
+    for (; duplex != duplexEnd; ++duplex) {
+        d_duplexes.emplace_back(duplex->d_interfaceName,
+                                duplex->d_tunnel.d_address,
+                                duplex->d_tunnel.d_gateway,
                                 handler);
     }
 }
@@ -125,7 +124,9 @@ int Resolver::resolve(const std::uint8_t *request,
         }
 
         std::vector<std::uint8_t> newRequest(request, request + requestLength);
-        IU::setDestinationAddress(newRequest.data(), duplex.address());
+        IU::setSourceAddress(newRequest.data(), duplex.address());
+        IU::setDestinationAddress(newRequest.data(), duplex.gateway());
+        IU::updateChecksum(newRequest.data());
         std::uint8_t *udp = IU::payload(newRequest.data());
         std::uint8_t *dns = UU::payload(udp);
         DU::setTransactionId(dns, newTransactionId);

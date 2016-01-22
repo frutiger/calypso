@@ -84,23 +84,23 @@ int Duplex::packetsReady(std::uintptr_t)
 }
 
 // CREATORS
-Duplex::Duplex(const std::string&                    interface,
-               const hauberk::EthernetUtil::Address& gatewayHardwareAddress,
-               std::uint32_t                         address,
-               const PacketHandler&                  packetHandler)
-: d_interface(interface)
+Duplex::Duplex(const std::string&   interfaceName,
+               std::uint32_t        address,
+               std::uint32_t        gateway,
+               const PacketHandler& packetHandler)
+: d_interfaceName(interfaceName)
 , d_address(address)
-, d_hardwareAddress()
+, d_gateway(gateway)
 , d_packetHandler(packetHandler)
+, d_hardwareAddress({{0xAC, 0xBC, 0x32, 0xCD, 0x3A, 0x6F}})
 , d_pcapHandle(0, &pcap_close)
 , d_datalinkType()
 , d_readHandle()
-, d_gatewayHardwareAddress(gatewayHardwareAddress)
 {
     typedef std::independent_bits_engine<std::mt19937, 8, std::uint8_t> Engine;
 
     Engine engine((std::mt19937(std::random_device()())));
-    std::generate(d_hardwareAddress.begin(), d_hardwareAddress.end(), engine);
+    //std::generate(d_hardwareAddress.begin(), d_hardwareAddress.end(), engine);
 }
 
 // MANIPULATORS
@@ -111,7 +111,8 @@ int Duplex::open(std::ostream&         errorStream,
                  const maxwell::Queue& queue)
 {
     char         createErrorBuffer[PCAP_ERRBUF_SIZE];
-    struct pcap *capture = pcap_create(d_interface.c_str(), createErrorBuffer);
+    struct pcap *capture = pcap_create(d_interfaceName.c_str(),
+                                       createErrorBuffer);
     if (!capture) {
         errorStream << "Failed to create pcap: " << createErrorBuffer;
         return -1;
@@ -240,7 +241,8 @@ int Duplex::send(hauberk::EthernetUtil::Type  packetType,
         typedef hauberk::EthernetUtil EU;
         // TBD: introduce constant from EU
         buffer.resize(14 + packetLength);
-        EU::setDestinationAddress(buffer.data(), d_gatewayHardwareAddress);
+        EU::setDestinationAddress(buffer.data(),
+                                  {{ 0x00, 0xF7, 0x6F, 0xD6, 0x2F, 0x28 }});
         EU::setSourceAddress(buffer.data(), d_hardwareAddress);
         EU::setType(buffer.data(), packetType);
         EU::copyPayload(buffer.data(), packetData, packetLength);
@@ -295,6 +297,11 @@ int Duplex::broadcast(hauberk::EthernetUtil::Type  packetType,
 std::uint32_t Duplex::address() const
 {
     return d_address;
+}
+
+std::uint32_t Duplex::gateway() const
+{
+    return d_gateway;
 }
 
 }  // close namespace 'trammel'

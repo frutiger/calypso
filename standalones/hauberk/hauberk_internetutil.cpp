@@ -73,11 +73,35 @@ std::uint8_t InternetUtil::protocol(const std::uint8_t *buffer)
     return buffer[9];
 }
 
-std::uint16_t InternetUtil::headerChecksum(const std::uint8_t *buffer)
+void InternetUtil::updateChecksum(std::uint8_t *buffer)
 {
-    std::uint16_t headerChecksum;
-    BufferUtil::copy(&headerChecksum, buffer + 10);
-    return headerChecksum;
+    // zero out checksum
+    BufferUtil::copy(buffer + 10, static_cast<std::uint16_t>(0));
+
+    std::uint32_t accumulator = 0;
+
+    // iterate over 16-bit words in header
+    for (std::uint8_t i = 0; i < headerLength(buffer); i += 2) {
+        // obtain i'th 16-bit word in network order
+        std::uint16_t word;
+        BufferUtil::copy(&word, buffer + i);
+        BufferUtil::toNetworkOrder(&word);
+
+        // accumulate word
+        accumulator += word;
+    }
+
+    // perform 16-bit carry
+    accumulator = (accumulator & 0xFFFF) + (accumulator >> 16);
+
+    // complement of 16-bits
+    std::uint16_t sum = accumulator;
+    sum = ~sum;
+
+    // back to network order
+    BufferUtil::toNetworkOrder(&sum);
+
+    BufferUtil::copy(buffer + 10, sum);
 }
 
 void InternetUtil::setSourceAddress(std::uint8_t  *buffer,

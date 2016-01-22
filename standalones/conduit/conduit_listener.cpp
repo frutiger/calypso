@@ -67,19 +67,18 @@ int Listener::processPacket(hauberk::EthernetUtil::Type  type,
 }
 
 // CREATORS
-Listener::Listener(
-            const ArgumentParser::InterfaceAddresses::value_type& listener,
-            ArgumentParser::InterfaceAddresses::const_iterator    endpoint,
-            ArgumentParser::InterfaceAddresses::const_iterator    endpointEnd)
-: d_duplex(std::get<0>(listener),
-           std::get<1>(listener),
-           std::get<2>(listener),
+Listener::Listener(const ArgumentUtil::Simplex&           simplex,
+                   ArgumentUtil::Duplexes::const_iterator duplex,
+                   ArgumentUtil::Duplexes::const_iterator duplexEnd)
+: d_duplex(simplex.d_interfaceName,
+           simplex.d_address,
+           0,
            std::bind(&Listener::processPacket,
                      this,
                      std::placeholders::_1,
                      std::placeholders::_2,
                      std::placeholders::_3))
-, d_resolver(endpoint, endpointEnd)
+, d_resolver(duplex, duplexEnd)
 {
 }
 

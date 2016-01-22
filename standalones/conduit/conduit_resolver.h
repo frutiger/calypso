@@ -2,8 +2,8 @@
 #ifndef CONDUIT_RESOLVER
 #define CONDUIT_RESOLVER
 
-#ifndef INCLUDED_CONDUIT_ARGUMENTPARSER
-#include <conduit_argumentparser.h>
+#ifndef INCLUDED_CONDUIT_ARGUMENTUTIL
+#include <conduit_argumentutil.h>
 #endif
 
 #ifndef INCLUDED_TRAMMEL_DUPLEX
@@ -71,8 +71,8 @@ class Resolver {
 
   public:
     // CREATORS
-    Resolver(ArgumentParser::InterfaceAddresses::const_iterator endpoint,
-             ArgumentParser::InterfaceAddresses::const_iterator endpointEnd);
+    Resolver(ArgumentUtil::Duplexes::const_iterator duplex,
+             ArgumentUtil::Duplexes::const_iterator duplexEnd);
         // TBD: contract
 
     // MANIPULATORS

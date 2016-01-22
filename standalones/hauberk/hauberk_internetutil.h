@@ -54,7 +54,7 @@ struct InternetUtil {
     static std::uint8_t protocol(const std::uint8_t *buffer);
         // TBD: contract
 
-    static std::uint16_t headerChecksum(const std::uint8_t *buffer);
+    static void updateChecksum(std::uint8_t *buffer);
         // TBD: contract
 
     static void setSourceAddress(std::uint8_t *buffer, std::uint32_t address);

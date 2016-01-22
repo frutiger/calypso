@@ -56,14 +56,14 @@ class Duplex {
     typedef std::unique_ptr<struct pcap, void (*)(struct pcap *)> Pcap;
 
     // DATA
-    std::string                    d_interface;
+    std::string                    d_interfaceName;
     std::uint32_t                  d_address;
-    hauberk::EthernetUtil::Address d_hardwareAddress;
+    std::uint32_t                  d_gateway;
     PacketHandler                  d_packetHandler;
+    hauberk::EthernetUtil::Address d_hardwareAddress;
     Pcap                           d_pcapHandle;
     int                            d_datalinkType;
     maxwell::Queue::Handle         d_readHandle;
-    hauberk::EthernetUtil::Address d_gatewayHardwareAddress;
 
     // MODIFIERS
     int read(hauberk::EthernetUtil::Type  *type,
@@ -76,10 +76,10 @@ class Duplex {
 
   public:
     // CREATORS
-    Duplex(const std::string&                    interface,
-           const hauberk::EthernetUtil::Address& gatewayHardwareAddress,
-           std::uint32_t                         address,
-           const PacketHandler&                  packetHandler);
+    Duplex(const std::string&   interfaceName,
+           std::uint32_t        address,
+           std::uint32_t        gateway,
+           const PacketHandler& packetHandler);
         // TBD: contract
 
     // MANIPULATORS
@@ -102,6 +102,9 @@ class Duplex {
 
     // ACCESSORS
     std::uint32_t address() const;
+        // TBD: contract
+
+    std::uint32_t gateway() const;
         // TBD: contract
 };
 
