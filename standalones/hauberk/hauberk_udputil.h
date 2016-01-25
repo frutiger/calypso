@@ -29,11 +29,7 @@ struct UdpUtil {
     static std::uint16_t length(const std::uint8_t *buffer);
         // TBD: contract
 
-    static void setChecksum(std::uint8_t *buffer, std::uint16_t checksum);
-        // TBD: should this be calculated?
-        // TBD: contract
-
-    static std::uint16_t checksum(const std::uint8_t *buffer);
+    static void updateChecksum(std::uint8_t *buffer);
         // TBD: contract
 
     static std::uint8_t *payload(std::uint8_t *buffer);

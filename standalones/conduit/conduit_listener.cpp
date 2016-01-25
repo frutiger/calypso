@@ -24,13 +24,14 @@ namespace conduit {
 // MODIFIERS
 int Listener::processDnsResponse(const std::uint8_t *packetData,
                                  std::size_t         packetLength,
-                                 std::uint32_t       gateway)
+                                 std::size_t         duplexIndex)
 {
-    std::cout << "got response from " << gateway << ": ";
-    std::for_each(packetData,
-                  packetData + packetLength,
-                  [](std::uint8_t octet) { std::cout << (int)octet << ' '; });
-    std::cout << '\n';
+    typedef hauberk::EthernetUtil EU;
+
+    std::cout << "got response from " << duplexIndex << '\n';
+    d_input.send(EU::Type::INTERNET,
+                 packetData,
+                 packetLength);
     return 0;
 }
 
@@ -67,25 +68,25 @@ int Listener::processPacket(hauberk::EthernetUtil::Type  type,
 }
 
 // CREATORS
-Listener::Listener(const ArgumentUtil::Simplex&           simplex,
-                   ArgumentUtil::Duplexes::const_iterator duplex,
-                   ArgumentUtil::Duplexes::const_iterator duplexEnd)
-: d_duplex(simplex.d_interfaceName,
-           simplex.d_address,
-           0,
-           std::bind(&Listener::processPacket,
-                     this,
-                     std::placeholders::_1,
-                     std::placeholders::_2,
-                     std::placeholders::_3))
-, d_resolver(duplex, duplexEnd)
+Listener::Listener(const ArgumentUtil::Simplex&           input,
+                   ArgumentUtil::Duplexes::const_iterator output,
+                   ArgumentUtil::Duplexes::const_iterator outputEnd)
+: d_input(input.d_interfaceName,
+          input.d_source,
+          input.d_source,
+          std::bind(&Listener::processPacket,
+                    this,
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3))
+, d_resolver(output, outputEnd)
 {
 }
 
 // MANIPULATORS
 int Listener::open(std::ostream& errorStream, const maxwell::Queue& queue)
 {
-    if (d_duplex.open(errorStream, 10, 65536, true, queue)) {
+    if (d_input.open(errorStream, 10, 65536, true, queue)) {
         return -1;
     }
 

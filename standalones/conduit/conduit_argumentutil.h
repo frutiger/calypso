@@ -40,18 +40,19 @@ struct ArgumentUtil {
     // TYPES
     struct Simplex {
         std::string   d_interfaceName;
-        std::uint32_t d_address;
+        std::uint32_t d_source;
     };
 
     struct Duplex {
         std::string d_interfaceName;
         struct Tunnel {
-            std::uint32_t d_address;
-            std::uint32_t d_gateway;
+            std::uint32_t d_source;
+            std::uint32_t d_destination;
         } d_tunnel;
     };
 
     typedef trammel::List<const struct pcap_if, trammel::Interface> Interfaces;
+    typedef std::vector<Simplex>                                    Simplexes;
     typedef std::vector<Duplex>                                     Duplexes;
 
     // CLASS METHODS
@@ -59,6 +60,11 @@ struct ArgumentUtil {
                          Simplex            *result,
                          const Interfaces&   interfaces,
                          const std::string&  argument);
+
+    static int toNamedSimplex(std::ostream&       errorStream,
+                              Simplex            *result,
+                              const Interfaces&   interfaces,
+                              const std::string&  argument);
 
     static int toDuplexTunnel(std::ostream&       errorStream,
                               Duplex::Tunnel     *result,

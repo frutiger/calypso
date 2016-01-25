@@ -56,6 +56,11 @@ void EthernetUtil::copyPayload(std::uint8_t       *buffer,
     std::copy(payload, payload + payloadLength, buffer + 14);
 }
 
+std::uint8_t *EthernetUtil::payload(std::uint8_t *buffer)
+{
+    return buffer + 14;
+}
+
 const std::uint8_t *EthernetUtil::payload(const std::uint8_t *buffer)
 {
     return buffer + 14;

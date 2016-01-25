@@ -46,22 +46,22 @@ class Resolver {
     // TYPES
     typedef std::function<int (const std::uint8_t *packetData,
                                std::size_t         packetLength,
-                               std::uint32_t       gateway)> Handler;
+                               std::size_t         duplexIndex)> Handler;
 
   private:
     // PRIVATE TYPES
     typedef std::vector<trammel::Duplex>              Duplexes;
     typedef std::independent_bits_engine<std::mt19937, 16, std::uint16_t>
                                                       Engine;
-    typedef std::tuple<std::uint16_t, std::uint32_t, Handler>
+    typedef std::tuple<std::uint16_t, Duplexes::size_type, Handler>
                                                       Transaction;
     typedef std::unordered_map<std::uint16_t, Transaction>
                                                       Transactions;
 
     // DATA
-    Duplexes     d_duplexes;
-    Engine       d_engine;
-    Transactions d_transactions;
+    Duplexes      d_duplexes;
+    Engine        d_engine;
+    Transactions  d_transactions;
 
     // MODIFIERS
     int processPacket(hauberk::EthernetUtil::Type  type,
@@ -71,8 +71,8 @@ class Resolver {
 
   public:
     // CREATORS
-    Resolver(ArgumentUtil::Duplexes::const_iterator duplex,
-             ArgumentUtil::Duplexes::const_iterator duplexEnd);
+    Resolver(ArgumentUtil::Duplexes::const_iterator output,
+             ArgumentUtil::Duplexes::const_iterator outputEnd);
         // TBD: contract
 
     // MANIPULATORS

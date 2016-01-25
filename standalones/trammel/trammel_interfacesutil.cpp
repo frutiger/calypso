@@ -38,14 +38,12 @@ int InterfacesUtil::fromAddress(std::string       *interfaceName,
     using Interfaces = List<const struct pcap_if,   Interface>;
     using Addresses  = List<const struct pcap_addr, Address>;
 
-    for (Interfaces::iterator interface  = interfaces.begin(),
-                              end        = Interfaces::iterator();
-                              interface != end;
+    for (Interfaces::iterator interface  = interfaces.begin();
+                              interface != Interfaces::iterator();
                             ++interface) {
-        Addresses addresses            = interface->addresses();
-        for (Addresses::iterator address  = interface->addresses().begin(),
-                                 end      = Addresses::iterator();
-                                 address != end;
+        Addresses addresses = interface->addresses();
+        for (Addresses::iterator address  = interface->addresses().begin();
+                                 address != Addresses::iterator();
                                ++address) {
             hauberk::SocketAddress sendAddress = address->sendAddress();
             if (sendAddress.isInternet() &&

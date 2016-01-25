@@ -14,6 +14,7 @@ namespace hauberk {
 void DnsUtil::setTransactionId(std::uint8_t  *buffer,
                                std::uint16_t  transactionId)
 {
+    BufferUtil::toNetworkOrder(&transactionId);
     BufferUtil::copy(buffer, transactionId);
 }
 

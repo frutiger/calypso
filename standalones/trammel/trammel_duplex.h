@@ -57,8 +57,8 @@ class Duplex {
 
     // DATA
     std::string                    d_interfaceName;
-    std::uint32_t                  d_address;
-    std::uint32_t                  d_gateway;
+    std::uint32_t                  d_source;
+    std::uint32_t                  d_destination;
     PacketHandler                  d_packetHandler;
     hauberk::EthernetUtil::Address d_hardwareAddress;
     Pcap                           d_pcapHandle;
@@ -76,9 +76,10 @@ class Duplex {
 
   public:
     // CREATORS
+    // TBD: sender only overload?
     Duplex(const std::string&   interfaceName,
-           std::uint32_t        address,
-           std::uint32_t        gateway,
+           std::uint32_t        source,
+           std::uint32_t        destination,
            const PacketHandler& packetHandler);
         // TBD: contract
 
@@ -98,13 +99,6 @@ class Duplex {
     int broadcast(hauberk::EthernetUtil::Type  packetType,
                   const std::uint8_t          *packetData,
                   std::size_t                  packetLength);
-        // TBD: contract
-
-    // ACCESSORS
-    std::uint32_t address() const;
-        // TBD: contract
-
-    std::uint32_t gateway() const;
         // TBD: contract
 };
 

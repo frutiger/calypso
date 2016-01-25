@@ -35,18 +35,9 @@ std::uint16_t UdpUtil::length(const std::uint8_t *buffer)
     return length;
 }
 
-void UdpUtil::setChecksum(std::uint8_t *buffer, std::uint16_t checksum)
+void UdpUtil::updateChecksum(std::uint8_t *buffer)
 {
-    BufferUtil::toNetworkOrder(&checksum);
-    BufferUtil::copy(buffer + 6, checksum);
-}
-
-std::uint16_t UdpUtil::checksum(const std::uint8_t *buffer)
-{
-    std::uint16_t checksum;
-    BufferUtil::copy(&checksum, buffer + 6);
-    BufferUtil::toHostOrder(&checksum);
-    return checksum;
+    BufferUtil::copy(buffer + 6, static_cast<std::uint16_t>(0));
 }
 
 std::uint8_t *UdpUtil::payload(std::uint8_t *buffer)

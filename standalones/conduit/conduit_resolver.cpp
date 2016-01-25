@@ -48,6 +48,8 @@ int Resolver::processPacket(hauberk::EthernetUtil::Type  type,
                              std::get<1>(transaction->second));
         std::uint8_t *newUdp = IU::payload(newResponse.data());
         std::uint8_t *newDns = UU::payload(newUdp);
+        std::cout << "mapping from " << (int)transaction->first << " to "
+                  << (int)std::get<0>(transaction->second) << '\n';
         DU::setTransactionId(newDns, std::get<0>(transaction->second));
         std::get<2>(transaction->second)(newResponse.data(),
                                          newResponse.size(),
@@ -61,23 +63,21 @@ int Resolver::processPacket(hauberk::EthernetUtil::Type  type,
 }
 
 // CREATORS
-Resolver::Resolver(ArgumentUtil::Duplexes::const_iterator duplex,
-                   ArgumentUtil::Duplexes::const_iterator duplexEnd)
+Resolver::Resolver(ArgumentUtil::Duplexes::const_iterator output,
+                   ArgumentUtil::Duplexes::const_iterator outputEnd)
 : d_duplexes()
 , d_engine((std::mt19937(std::random_device()())))
 , d_transactions()
 {
-    trammel::Duplex::PacketHandler handler = std::bind(
-                                                      &Resolver::processPacket,
-                                                      this,
-                                                      std::placeholders::_1,
-                                                      std::placeholders::_2,
-                                                      std::placeholders::_3);
-    for (; duplex != duplexEnd; ++duplex) {
-        d_duplexes.emplace_back(duplex->d_interfaceName,
-                                duplex->d_tunnel.d_address,
-                                duplex->d_tunnel.d_gateway,
-                                handler);
+    for (; output != outputEnd; ++output) {
+        d_duplexes.emplace_back(output->d_interfaceName,
+                                output->d_tunnel.d_source,
+                                output->d_tunnel.d_destination,
+                                std::bind(&Resolver::processPacket,
+                                          this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2,
+                                          std::placeholders::_3));
     }
 }
 
@@ -112,28 +112,26 @@ int Resolver::resolve(const std::uint8_t *request,
     const std::uint8_t *udp     = IU::payload(request);
     const std::uint8_t *dns     = UU::payload(udp);
     std::uint16_t transactionId = DU::transactionId(dns);
-    for (auto& duplex: d_duplexes) {
+    for (decltype(d_duplexes.size()) i = 0; i != d_duplexes.size(); ++i) {
         std::uint16_t newTransactionId = d_engine();
         while (true) {
             if (d_transactions.insert({ newTransactionId,
                                         { transactionId,
-                                          duplex.address(),
+                                          i,
                                           handler }}).second) {
                 break;
             }
         }
 
         std::vector<std::uint8_t> newRequest(request, request + requestLength);
-        IU::setSourceAddress(newRequest.data(), duplex.address());
-        IU::setDestinationAddress(newRequest.data(), duplex.gateway());
-        IU::updateChecksum(newRequest.data());
         std::uint8_t *udp = IU::payload(newRequest.data());
+        UU::updateChecksum(udp);
         std::uint8_t *dns = UU::payload(udp);
         DU::setTransactionId(dns, newTransactionId);
 
-        if (duplex.send(EU::Type::INTERNET,
-                        newRequest.data(),
-                        newRequest.size())) {
+        if (d_duplexes[i].send(EU::Type::INTERNET,
+                               newRequest.data(),
+                               newRequest.size())) {
             return -1;
         }
     }

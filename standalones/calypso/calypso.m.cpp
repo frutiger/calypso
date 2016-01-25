@@ -16,15 +16,14 @@ static std::ostream& usage(std::ostream&      stream,
                            const std::string& programName)
 {
     return stream << "Usage: " << programName <<
-                     " <source> <destination>:<gateway>...\n";
+                     " <src> <gwy src>:<gwy dst>...\n";
 }
 
 }  // close unnamed namespace
 
 int main(int argc, char **argv)
 {
-    typedef std::vector<std::string> Strings;
-    Strings arguments(argv, argv + argc);
+    std::vector<std::string> arguments(argv, argv + argc);
 
     if (arguments.size() < 2) {
         usage(std::cerr, arguments[0]);
@@ -36,28 +35,28 @@ int main(int argc, char **argv)
         return -1;                                                    // RETURN
     }
 
-    conduit::ArgumentUtil::Simplex simplex;
+    // TBD: make loopback address instead of requiring it
+    conduit::ArgumentUtil::Simplex input;
     if (conduit::ArgumentUtil::toSimplex(std::cerr,
-                                         &simplex,
+                                         &input,
                                          interfaces,
                                          arguments[1])) {
         usage(std::cerr, arguments[0]);
         return -1;                                                    // RETURN
     }
 
-    conduit::ArgumentUtil::Duplexes duplexes;
-    for (Strings::const_iterator argument  = arguments.begin() + 2;
-                                 argument != arguments.end();
-                               ++argument) {
-        conduit::ArgumentUtil::Duplex duplex;
+    conduit::ArgumentUtil::Duplexes outputs;
+    for (auto argument  = arguments.begin() + 2;
+              argument != arguments.end();
+            ++argument) {
+        outputs.resize(outputs.size() + 1);
         if (conduit::ArgumentUtil::toDuplex(std::cerr,
-                                            &duplex,
+                                            &outputs.back(),
                                             interfaces,
                                             *argument)) {
             usage(std::cerr, arguments[0]);
             return -1;
         }
-        duplexes.push_back(duplex);
     }
 
     maxwell::Queue queue(TEN_MS_AS_NS);
@@ -65,8 +64,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    conduit::Listener listener(simplex, duplexes.begin(), duplexes.end());
-
+    conduit::Listener listener(input, outputs.begin(), outputs.end());
     if (listener.open(std::cerr, queue)) {
         return -1;
     }

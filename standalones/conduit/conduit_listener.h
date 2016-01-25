@@ -34,13 +34,13 @@ namespace conduit {
 
 class Listener {
     // DATA
-    trammel::Duplex d_duplex;
+    trammel::Duplex d_input;
     Resolver        d_resolver;
 
     // MODIFIERS
     int processDnsResponse(const std::uint8_t *packetData,
                            std::size_t         packetLength,
-                           std::uint32_t       gateway);
+                           std::size_t         duplexIndex);
         // TBD: contract
 
     int processDnsRequest(const std::uint8_t *request,
@@ -58,9 +58,9 @@ class Listener {
     Listener& operator=(const Listener&) = delete;
 
     // CREATORS
-    Listener(const ArgumentUtil::Simplex&           simplex,
-             ArgumentUtil::Duplexes::const_iterator duplex,
-             ArgumentUtil::Duplexes::const_iterator duplexEnd);
+    Listener(const ArgumentUtil::Simplex&           input,
+             ArgumentUtil::Duplexes::const_iterator output,
+             ArgumentUtil::Duplexes::const_iterator outputEnd);
         // TBD: contract
 
     // MANIPULATORS

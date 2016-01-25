@@ -4,12 +4,21 @@
 
 #include <hauberk_arputil.h>
 #include <hauberk_ethernetutil.h>
+#include <hauberk_internetutil.h>
 #include <hauberk_loopbackutil.h>
 
 #include <cassert>
 #include <random>
 
 #include <pcap/pcap.h>
+
+#include <iostream>
+#include <iterator>
+
+namespace {
+static const hauberk::EthernetUtil::Address BROADCAST_ADDRESS =
+                                      {{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }};
+}  // close unnamed namespace
 
 namespace trammel {
 
@@ -52,7 +61,8 @@ int Duplex::read(hauberk::EthernetUtil::Type  *type,
           case DLT_EN10MB: {
             EU::Address destinationAddress;
             EU::destinationAddress(&destinationAddress, data);
-            if (destinationAddress != d_hardwareAddress) {
+            if (destinationAddress != d_hardwareAddress &&
+                                   destinationAddress != ::BROADCAST_ADDRESS) {
                 // TBD: install BPF filter programs instead of checking the
                 // packet in user space
                 continue;
@@ -76,8 +86,32 @@ int Duplex::packetsReady(std::uintptr_t)
     const std::uint8_t          *packetData;
     std::size_t                  packetLength;
     while (!read(&packetType, &packetData, &packetLength)) {
-        if (d_packetHandler(packetType, packetData, packetLength)) {
-            return -1;
+        switch (packetType) {
+          case hauberk::EthernetUtil::Type::ARP: {
+            typedef hauberk::ArpUtil AU;
+
+            const std::uint8_t *arp = packetData;
+            //std::cout << "ARP request!\n";
+            if (AU::targetProtocolAddress(arp) == d_source) {
+                std::cout << "self ARP request!\n";
+            }
+          } break;
+
+          case hauberk::EthernetUtil::Type::INTERNET: {
+            typedef hauberk::InternetUtil IU;
+
+            const std::uint8_t *internet = packetData;
+            if (IU::destinationAddress(internet) != d_source) {
+                continue;
+            }
+
+            if (d_packetHandler(packetType, packetData, packetLength)) {
+                return -1;
+            }
+          } break;
+
+          default:
+            continue;
         }
     }
     return 0;
@@ -85,22 +119,26 @@ int Duplex::packetsReady(std::uintptr_t)
 
 // CREATORS
 Duplex::Duplex(const std::string&   interfaceName,
-               std::uint32_t        address,
-               std::uint32_t        gateway,
+               std::uint32_t        source,
+               std::uint32_t        destination,
                const PacketHandler& packetHandler)
 : d_interfaceName(interfaceName)
-, d_address(address)
-, d_gateway(gateway)
+, d_source(source)
+, d_destination(destination)
 , d_packetHandler(packetHandler)
-, d_hardwareAddress({{0xAC, 0xBC, 0x32, 0xCD, 0x3A, 0x6F}})
+, d_hardwareAddress()
 , d_pcapHandle(0, &pcap_close)
 , d_datalinkType()
 , d_readHandle()
 {
     typedef std::independent_bits_engine<std::mt19937, 8, std::uint8_t> Engine;
 
+    d_hardwareAddress[0] = 0;
     Engine engine((std::mt19937(std::random_device()())));
-    //std::generate(d_hardwareAddress.begin(), d_hardwareAddress.end(), engine);
+    std::generate(d_hardwareAddress.begin() + 1,
+                  d_hardwareAddress.end(),
+                  engine);
+    d_hardwareAddress = {{0xac, 0xbc, 0x32, 0xcd, 0x3a, 0x6f}};
 }
 
 // MANIPULATORS
@@ -197,9 +235,9 @@ int Duplex::open(std::ostream&         errorStream,
         AU::setProtocolAddressLength(arpBuffer.data(), sizeof(std::uint32_t));
         AU::setOperation(arpBuffer.data(), AU::Operation::REQUEST);
         AU::setSenderHardwareAddress(arpBuffer.data(), d_hardwareAddress);
-        AU::setSenderProtocolAddress(arpBuffer.data(), 0x0100007f);
-        // skipping target hardware address
-        AU::setTargetProtocolAddress(arpBuffer.data(), d_address);
+        // skipping sender protocol receiver
+        // skipping target hardware receiver
+        AU::setTargetProtocolAddress(arpBuffer.data(), d_source);
         if (broadcast(hauberk::EthernetUtil::Type::ARP,
                       arpBuffer.data(),
                       arpBuffer.size())) {
@@ -235,17 +273,30 @@ int Duplex::send(hauberk::EthernetUtil::Type  packetType,
         LU::setProtocolFamily(buffer.data(), LU::Family::INTERNET);
         LU::copyPayload(buffer.data(), packetData, packetLength);
 
+        std::uint8_t *internet = EU::payload(buffer.data());
+        IU::setSourceAddress(internet, d_source);
+        IU::setDestinationAddress(internet, d_destination);
+        IU::updateChecksum(internet);
+        // TBD: frame check sequence?
       } break;
 
       case DLT_EN10MB: {
         typedef hauberk::EthernetUtil EU;
+        typedef hauberk::InternetUtil IU;
+
         // TBD: introduce constant from EU
         buffer.resize(14 + packetLength);
+        // TBD: ARP out the hardware receiver
         EU::setDestinationAddress(buffer.data(),
                                   {{ 0x00, 0xF7, 0x6F, 0xD6, 0x2F, 0x28 }});
         EU::setSourceAddress(buffer.data(), d_hardwareAddress);
         EU::setType(buffer.data(), packetType);
         EU::copyPayload(buffer.data(), packetData, packetLength);
+
+        std::uint8_t *internet = EU::payload(buffer.data());
+        IU::setSourceAddress(internet, d_source);
+        IU::setDestinationAddress(internet, d_destination);
+        IU::updateChecksum(internet);
         // TBD: frame check sequence?
       } break;
 
@@ -275,8 +326,7 @@ int Duplex::broadcast(hauberk::EthernetUtil::Type  packetType,
         typedef hauberk::EthernetUtil EU;
 
         buffer.resize(14 + packetLength);
-        EU::setDestinationAddress(buffer.data(),
-                                  {{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }});
+        EU::setDestinationAddress(buffer.data(), ::BROADCAST_ADDRESS);
         EU::setSourceAddress(buffer.data(), d_hardwareAddress);
         EU::setType(buffer.data(), packetType);
         EU::copyPayload(buffer.data(), packetData, packetLength);
@@ -291,17 +341,6 @@ int Duplex::broadcast(hauberk::EthernetUtil::Type  packetType,
     }
 
     return 0;
-}
-
-// ACCESSORS
-std::uint32_t Duplex::address() const
-{
-    return d_address;
-}
-
-std::uint32_t Duplex::gateway() const
-{
-    return d_gateway;
 }
 
 }  // close namespace 'trammel'
