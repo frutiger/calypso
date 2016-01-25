@@ -48,9 +48,8 @@ int Resolver::processPacket(hauberk::EthernetUtil::Type  type,
                              std::get<1>(transaction->second));
         std::uint8_t *newUdp = IU::payload(newResponse.data());
         std::uint8_t *newDns = UU::payload(newUdp);
-        std::cout << "mapping from " << (int)transaction->first << " to "
-                  << (int)std::get<0>(transaction->second) << '\n';
         DU::setTransactionId(newDns, std::get<0>(transaction->second));
+        UU::updateChecksum(newUdp);
         std::get<2>(transaction->second)(newResponse.data(),
                                          newResponse.size(),
                                          std::get<1>(transaction->second));

@@ -268,12 +268,14 @@ int Duplex::send(hauberk::EthernetUtil::Type  packetType,
         }
 
         typedef hauberk::LoopbackUtil LU;
+        typedef hauberk::InternetUtil IU;
+
         // TBD: introduce constant from LU
         buffer.resize(sizeof(LU::Family) + packetLength);
         LU::setProtocolFamily(buffer.data(), LU::Family::INTERNET);
         LU::copyPayload(buffer.data(), packetData, packetLength);
 
-        std::uint8_t *internet = EU::payload(buffer.data());
+        std::uint8_t *internet = LU::payload(buffer.data());
         IU::setSourceAddress(internet, d_source);
         IU::setDestinationAddress(internet, d_destination);
         IU::updateChecksum(internet);

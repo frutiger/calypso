@@ -14,12 +14,50 @@ namespace hauberk {
                                // =============
 
 struct DnsUtil {
+    // TYPES
+    enum class Type {
+        A    = 1,
+        AAAA = 28,
+    };
+
+    enum class Class {
+        INTERNET = 1,
+    };
+
     // CLASS METHODS
     static void setTransactionId(std::uint8_t  *buffer,
                                  std::uint16_t  transactionId);
         // TBD: contract
 
     static std::uint16_t transactionId(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static std::uint16_t flags(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static std::uint16_t numQueries(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static std::uint16_t numResponses(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static std::uint16_t numAuthorities(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static std::uint16_t numAdditional(const std::uint8_t *buffer);
+        // TBD: contract
+
+    static const std::uint8_t *findRecord(const std::uint8_t *buffer,
+                                          std::uint32_t       recordNumber);
+        // TBD: contract
+
+    static std::uint32_t recordLabelLength(const std::uint8_t *record);
+        // TBD: contract
+
+    static std::uint16_t recordType(const std::uint8_t *record);
+        // TBD: contract
+
+    static std::uint16_t recordClass(const std::uint8_t *record);
         // TBD: contract
 
     // TBD: add remaining accessors

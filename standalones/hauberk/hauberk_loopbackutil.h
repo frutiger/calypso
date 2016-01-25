@@ -36,6 +36,9 @@ struct LoopbackUtil {
                             std::size_t         payloadLength);
         // TBD: contract
 
+    static std::uint8_t *payload(std::uint8_t *buffer);
+        // TBD: contract
+
     static const std::uint8_t *payload(const std::uint8_t *buffer);
         // TBD: contract
 };

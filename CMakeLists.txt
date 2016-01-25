@@ -4,7 +4,8 @@ cmake_minimum_required(VERSION 3.4)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++14 -stdlib=libc++ -Wall -Wextra -Werror")
 
-add_library(hauberk standalones/hauberk/hauberk_bufferutil.cpp
+add_library(hauberk standalones/hauberk/hauberk_arputil.cpp
+                    standalones/hauberk/hauberk_bufferutil.cpp
                     standalones/hauberk/hauberk_dnsutil.cpp
                     standalones/hauberk/hauberk_ethernetutil.cpp
                     standalones/hauberk/hauberk_internetutil.cpp

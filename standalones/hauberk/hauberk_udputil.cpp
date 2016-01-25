@@ -37,6 +37,7 @@ std::uint16_t UdpUtil::length(const std::uint8_t *buffer)
 
 void UdpUtil::updateChecksum(std::uint8_t *buffer)
 {
+    // TBD: actual checksum
     BufferUtil::copy(buffer + 6, static_cast<std::uint16_t>(0));
 }
 

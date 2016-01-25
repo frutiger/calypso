@@ -3,6 +3,7 @@
 #include <conduit_listener.h>
 
 #include <maxwell_queue.h>
+#include <hauberk_dnsutil.h>
 #include <hauberk_internetutil.h>
 #include <hauberk_internetaddressutil.h>
 #include <hauberk_udputil.h>
@@ -24,11 +25,22 @@ namespace conduit {
 // MODIFIERS
 int Listener::processDnsResponse(const std::uint8_t *packetData,
                                  std::size_t         packetLength,
-                                 std::size_t         duplexIndex)
+                                 std::size_t         )
 {
     typedef hauberk::EthernetUtil EU;
+    typedef hauberk::InternetUtil IU;
+    typedef hauberk::UdpUtil      UU;
+    typedef hauberk::DnsUtil      DU;
 
-    std::cout << "got response from " << duplexIndex << '\n';
+    const std::uint8_t *udp = IU::payload(packetData);
+    const std::uint8_t *dns = UU::payload(udp);
+
+    std::uint16_t numQueries = DU::numQueries(dns);
+    for (auto i = 0; i < DU::numResponses(dns); ++i) {
+        const std::uint8_t *record = DU::findRecord(dns, numQueries + i);
+        std::cout << (int)DU::recordType(record) << '\n';
+    }
+
     d_input.send(EU::Type::INTERNET,
                  packetData,
                  packetLength);

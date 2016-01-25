@@ -32,6 +32,11 @@ void LoopbackUtil::copyPayload(std::uint8_t       *buffer,
     std::copy(payloadData, payloadData + payloadLength, buffer + 4);
 }
 
+std::uint8_t *LoopbackUtil::payload(std::uint8_t *buffer)
+{
+    return buffer + 4;
+}
+
 const std::uint8_t *LoopbackUtil::payload(const std::uint8_t *buffer)
 {
     return buffer + 4;
