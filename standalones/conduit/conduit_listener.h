@@ -24,7 +24,12 @@
 #include <string>
 #endif
 
-namespace maxwell { class Queue;    }
+#ifndef INCLUDED_UNORDERED_MAP
+#define INCLUDED_UNORDERED_MAP
+#include <unordered_map>
+#endif
+
+namespace maxwell { class Queue; }
 
 namespace conduit {
 
@@ -33,9 +38,21 @@ namespace conduit {
                                // ==============
 
 class Listener {
+    // PRIVATE TYPES
+    struct Query {
+        std::size_t d_preferredGateway;
+        std::size_t d_gatewaysRemaining;
+    };
+
+    typedef std::vector<std::uint32_t>                       Gateways;
+    typedef std::unordered_map<std::string, Query>           Queries;
+    typedef std::unordered_map<std::uint32_t, std::uint32_t> Routes;
+
     // DATA
     trammel::Duplex d_input;
+    Gateways        d_gateways;
     Resolver        d_resolver;
+    Routes          d_routes;
 
     // MODIFIERS
     int processDnsResponse(const std::uint8_t *packetData,

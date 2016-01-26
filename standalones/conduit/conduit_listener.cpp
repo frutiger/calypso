@@ -3,6 +3,7 @@
 #include <conduit_listener.h>
 
 #include <maxwell_queue.h>
+#include <hauberk_bufferutil.h>
 #include <hauberk_dnsutil.h>
 #include <hauberk_internetutil.h>
 #include <hauberk_internetaddressutil.h>
@@ -38,7 +39,12 @@ int Listener::processDnsResponse(const std::uint8_t *packetData,
     std::uint16_t numQueries = DU::numQueries(dns);
     for (auto i = 0; i < DU::numResponses(dns); ++i) {
         const std::uint8_t *record = DU::findRecord(dns, numQueries + i);
-        std::cout << (int)DU::recordType(record) << '\n';
+        if (DU::Type(DU::recordType(record)) == DU::Type::A &&
+            DU::Class(DU::recordClass(record)) == DU::Class::INTERNET &&
+            DU::recordDataLength(record) == 4) {
+            std::uint32_t address;
+            hauberk::BufferUtil::copy(&address, DU::recordData(record));
+        }
     }
 
     d_input.send(EU::Type::INTERNET,
@@ -92,7 +98,13 @@ Listener::Listener(const ArgumentUtil::Simplex&           input,
                     std::placeholders::_2,
                     std::placeholders::_3))
 , d_resolver(output, outputEnd)
+, d_gateways()
+, d_routes()
 {
+    std::transform(output,
+                   outputEnd,
+                   std::back_inserter(d_gateways),
+                   [](auto& duplex) { return duplex.d_tunnel.d_destination; });
 }
 
 // MANIPULATORS
