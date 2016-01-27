@@ -7,6 +7,11 @@
 #include <cstdint>
 #endif
 
+#ifndef INCLUDED_FUNCTIONAL
+#define INCLUDED_FUNCTIONAL
+#include <functional>
+#endif
+
 namespace hauberk {
 
                                // =============
@@ -23,6 +28,9 @@ struct DnsUtil {
     enum class Class : std::uint16_t {
         INTERNET = 1,
     };
+
+    typedef std::function<void (const std::uint8_t *label,
+                                std::uint8_t        length)> LabelHandler;
 
     // CLASS METHODS
     static void setTransactionId(std::uint8_t  *buffer,
@@ -47,11 +55,24 @@ struct DnsUtil {
     static std::uint16_t numAdditional(const std::uint8_t *buffer);
         // TBD: contract
 
-    static std::uint32_t recordLabelLength(const std::uint8_t *record);
+    static std::uint32_t totalRecordLabelLength(const std::uint8_t *record);
         // TBD: contract
 
     static const std::uint8_t *findRecord(const std::uint8_t *buffer,
                                           std::uint32_t       recordNumber);
+        // TBD: contract
+
+    static std::uint8_t recordLabelLength(const std::uint8_t *buffer,
+                                          const std::uint8_t *record);
+        // TBD: contract
+
+    static const std::uint8_t *recordLabel(const std::uint8_t *buffer,
+                                           const std::uint8_t *record);
+        // TBD: contract
+
+    static void walkLabels(const std::uint8_t  *buffer,
+                           const std::uint8_t  *record,
+                           const LabelHandler&  labelHandler);
         // TBD: contract
 
     static std::uint16_t recordType(const std::uint8_t *record);

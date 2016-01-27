@@ -66,7 +66,7 @@ std::uint16_t DnsUtil::numAdditional(const std::uint8_t *buffer)
     return result;
 }
 
-std::uint32_t DnsUtil::recordLabelLength(const std::uint8_t *record)
+std::uint32_t DnsUtil::totalRecordLabelLength(const std::uint8_t *record)
 {
     const std::uint8_t *offset = record;
     if (*offset & 0xc0) {
@@ -83,16 +83,55 @@ const std::uint8_t *DnsUtil::findRecord(const std::uint8_t *buffer,
 {
     const std::uint8_t *record = buffer + 12;
     while (recordNumber != 0) {
-        record += recordLabelLength(record) + 4;
+        record += totalRecordLabelLength(record) + 4;
         --recordNumber;
     }
     return record;
 }
 
+std::uint8_t DnsUtil::recordLabelLength(const std::uint8_t *buffer,
+                                        const std::uint8_t *record)
+{
+    if (*record & 0xc0) {
+        return buffer[*(record + 1)];
+    }
+    else {
+        return *record;
+    }
+}
+
+const std::uint8_t *DnsUtil::recordLabel(const std::uint8_t *buffer,
+                                         const std::uint8_t *record)
+{
+    if (*record & 0xc0) {
+        return buffer + *(record + 1) + 1;
+    }
+    else {
+        return record + 1;
+    }
+}
+
+void DnsUtil::walkLabels(const std::uint8_t  *buffer,
+                         const std::uint8_t  *record,
+                         const LabelHandler&  labelHandler)
+{
+    const std::uint8_t *labelOffset = record;
+    while (true) {
+        std::uint8_t labelLength = recordLabelLength(buffer, labelOffset);
+                     labelOffset = recordLabel(buffer, labelOffset);
+        if (labelLength == 0) {
+            return;                                                   // RETURN
+        }
+
+        labelHandler(labelOffset, labelLength);
+        labelOffset += labelLength;
+    }
+}
+
 std::uint16_t DnsUtil::recordType(const std::uint8_t *record)
 {
     std::uint16_t result;
-    BufferUtil::copy(&result, record + recordLabelLength(record));
+    BufferUtil::copy(&result, record + totalRecordLabelLength(record));
     BufferUtil::toHostOrder(&result);
     return result;
 }
@@ -100,7 +139,7 @@ std::uint16_t DnsUtil::recordType(const std::uint8_t *record)
 std::uint16_t DnsUtil::recordClass(const std::uint8_t *record)
 {
     std::uint16_t result;
-    BufferUtil::copy(&result, record + 2 + recordLabelLength(record));
+    BufferUtil::copy(&result, record + totalRecordLabelLength(record) + 2);
     BufferUtil::toHostOrder(&result);
     return result;
 }
@@ -108,7 +147,7 @@ std::uint16_t DnsUtil::recordClass(const std::uint8_t *record)
 std::uint32_t DnsUtil::recordTimeToLive(const std::uint8_t *record)
 {
     std::uint32_t result;
-    BufferUtil::copy(&result, record + 4 + recordLabelLength(record));
+    BufferUtil::copy(&result, record + totalRecordLabelLength(record) + 4);
     BufferUtil::toHostOrder(&result);
     return result;
 }
@@ -116,14 +155,14 @@ std::uint32_t DnsUtil::recordTimeToLive(const std::uint8_t *record)
 std::uint16_t DnsUtil::recordDataLength(const std::uint8_t *record)
 {
     std::uint16_t result;
-    BufferUtil::copy(&result, record + 8 + recordLabelLength(record));
+    BufferUtil::copy(&result, record + totalRecordLabelLength(record) + 8);
     BufferUtil::toHostOrder(&result);
     return result;
 }
 
 const std::uint8_t *DnsUtil::recordData(const std::uint8_t *record)
 {
-    return record + 10 + recordLabelLength(record);
+    return record + totalRecordLabelLength(record) + 10;
 }
 
 }  // close namespace 'hauberk'

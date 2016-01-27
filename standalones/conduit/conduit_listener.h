@@ -40,7 +40,7 @@ namespace conduit {
 class Listener {
     // PRIVATE TYPES
     struct Query {
-        std::size_t d_preferredGateway;
+        std::size_t d_preferredGatewayIndex;
         std::size_t d_gatewaysRemaining;
     };
 
@@ -52,12 +52,13 @@ class Listener {
     trammel::Duplex d_input;
     Gateways        d_gateways;
     Resolver        d_resolver;
+    Queries         d_queries;
     Routes          d_routes;
 
     // MODIFIERS
     int processDnsResponse(const std::uint8_t *packetData,
                            std::size_t         packetLength,
-                           std::size_t         duplexIndex);
+                           std::size_t         gatewayIndex);
         // TBD: contract
 
     int processDnsRequest(const std::uint8_t *request,

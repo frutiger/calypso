@@ -26,7 +26,7 @@ namespace conduit {
 // MODIFIERS
 int Listener::processDnsResponse(const std::uint8_t *packetData,
                                  std::size_t         packetLength,
-                                 std::size_t         )
+                                 std::size_t         gatewayIndex)
 {
     typedef hauberk::EthernetUtil EU;
     typedef hauberk::InternetUtil IU;
@@ -39,12 +39,50 @@ int Listener::processDnsResponse(const std::uint8_t *packetData,
     std::uint16_t numQueries = DU::numQueries(dns);
     for (auto i = 0; i < DU::numResponses(dns); ++i) {
         const std::uint8_t *record = DU::findRecord(dns, numQueries + i);
-        if (DU::Type(DU::recordType(record)) == DU::Type::A &&
-            DU::Class(DU::recordClass(record)) == DU::Class::INTERNET &&
-            DU::recordDataLength(record) == 4) {
-            std::uint32_t address;
-            hauberk::BufferUtil::copy(&address, DU::recordData(record));
+        if (DU::Type(DU::recordType(record)) != DU::Type::A) {
+            continue;
         }
+
+        if (DU::Class(DU::recordClass(record)) != DU::Class::INTERNET) {
+            continue;
+        }
+
+        if (DU::recordDataLength(record) != 4) {
+            continue;
+        }
+
+        std::uint32_t address;
+        hauberk::BufferUtil::copy(&address, DU::recordData(record));
+
+        std::string name;
+        DU::walkLabels(dns, record, [&name](auto label, auto length) {
+            std::copy(label, label + length, std::back_inserter(name));
+            name.push_back('.');
+        });
+        Queries::iterator query = d_queries.find(name);
+        if (query == d_queries.end()) {
+            std::cout << "Warning: got response for non-waiting query\n";
+            continue;
+        }
+
+        if (query->second.d_gatewaysRemaining == d_gateways.size()) {
+            query->second.d_preferredGatewayIndex = gatewayIndex;
+        }
+        else {
+            query->second.d_preferredGatewayIndex =
+                                std::min(query->second.d_preferredGatewayIndex,
+                                         gatewayIndex);
+        }
+
+        --query->second.d_gatewaysRemaining;
+        if (query->second.d_gatewaysRemaining != 0) {
+            continue;
+        }
+
+        d_routes[address] = d_gateways[query->second.d_preferredGatewayIndex];
+        std::cout << "gateway: " << d_routes[address]
+                  << " for " << address << '\n';
+        d_queries.erase(query);
     }
 
     d_input.send(EU::Type::INTERNET,
@@ -56,6 +94,32 @@ int Listener::processDnsResponse(const std::uint8_t *packetData,
 int Listener::processDnsRequest(const std::uint8_t *request,
                                 std::size_t         requestLength)
 {
+    typedef hauberk::InternetUtil IU;
+    typedef hauberk::UdpUtil      UU;
+    typedef hauberk::DnsUtil      DU;
+
+    const std::uint8_t *udp = IU::payload(request);
+    const std::uint8_t *dns = UU::payload(udp);
+
+    for (auto i = 0; i < DU::numQueries(dns); ++i) {
+        const std::uint8_t *record = DU::findRecord(dns, i);
+
+        if (DU::Type(DU::recordType(record)) != DU::Type::A) {
+            continue;
+        }
+
+        if (DU::Class(DU::recordClass(record)) != DU::Class::INTERNET) {
+            continue;
+        }
+
+        std::string name;
+        DU::walkLabels(dns, record, [&name](auto label, auto length) {
+            std::copy(label, label + length, std::back_inserter(name));
+            name.push_back('.');
+        });
+        d_queries[name] = { 0, d_gateways.size() };
+    }
+
     return d_resolver.resolve(request,
                               requestLength,
                               std::bind(&Listener::processDnsResponse,
@@ -97,8 +161,9 @@ Listener::Listener(const ArgumentUtil::Simplex&           input,
                     std::placeholders::_1,
                     std::placeholders::_2,
                     std::placeholders::_3))
-, d_resolver(output, outputEnd)
 , d_gateways()
+, d_resolver(output, outputEnd)
+, d_queries()
 , d_routes()
 {
     std::transform(output,
