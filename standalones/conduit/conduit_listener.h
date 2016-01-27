@@ -44,9 +44,14 @@ class Listener {
         std::size_t d_gatewaysRemaining;
     };
 
-    typedef std::vector<std::uint32_t>                       Gateways;
-    typedef std::unordered_map<std::string, Query>           Queries;
-    typedef std::unordered_map<std::uint32_t, std::uint32_t> Routes;
+    struct Gateway {
+        std::uint32_t   d_address;
+        trammel::Duplex d_duplex;
+    };
+
+    typedef std::vector<Gateway>                         Gateways;
+    typedef std::unordered_map<std::string, Query>       Queries;
+    typedef std::unordered_map<std::uint32_t, Gateway *> Routes;
 
     // DATA
     trammel::Duplex d_input;

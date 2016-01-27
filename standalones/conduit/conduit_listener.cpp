@@ -61,7 +61,6 @@ int Listener::processDnsResponse(const std::uint8_t *packetData,
         });
         Queries::iterator query = d_queries.find(name);
         if (query == d_queries.end()) {
-            std::cout << "Warning: got response for non-waiting query\n";
             continue;
         }
 
@@ -79,9 +78,15 @@ int Listener::processDnsResponse(const std::uint8_t *packetData,
             continue;
         }
 
-        d_routes[address] = d_gateways[query->second.d_preferredGatewayIndex];
-        std::cout << "gateway: " << d_routes[address]
-                  << " for " << address << '\n';
+        d_routes[address] = &d_gateways[query->second.d_preferredGatewayIndex];
+
+        std::string addrString, gwyString;
+        hauberk::InternetAddressUtil::toDisplay(&addrString, address);
+        hauberk::InternetAddressUtil::toDisplay(&gwyString,
+                                                d_routes[address]->d_address);
+        std::cout << "Name " << name << " "
+                     "address " << addrString << " "
+                     "gateway " << gwyString << '\n';
         d_queries.erase(query);
     }
 
@@ -133,6 +138,7 @@ int Listener::processPacket(hauberk::EthernetUtil::Type  type,
                             const std::uint8_t          *packetData,
                             std::size_t                  packetLength)
 {
+    typedef hauberk::EthernetUtil EU;
     typedef hauberk::InternetUtil IU;
     typedef hauberk::UdpUtil      UU;
 
@@ -145,6 +151,22 @@ int Listener::processPacket(hauberk::EthernetUtil::Type  type,
         if (UU::Port(UU::destinationPort(udp)) == UU::Port::DNS) {
             return processDnsRequest(packetData, packetLength);
         }
+    }
+    else {
+        std::uint32_t destination = IU::destinationAddress(packetData);
+        Routes::const_iterator route = d_routes.find(destination);
+        if (route == d_routes.end()) {
+            std::cout << "No route for " << destination << '\n';
+            return 0;
+        }
+
+        std::vector<std::uint8_t> newPacket(packetData,
+                                            packetData + packetLength);
+        IU::setDestinationAddress(newPacket.data(), route->second->d_address);
+        IU::updateChecksum(newPacket.data());
+        return route->second->d_duplex.send(EU::Type::INTERNET,
+                                            newPacket.data(),
+                                            newPacket.size());
     }
     return 0;
 }
@@ -169,7 +191,16 @@ Listener::Listener(const ArgumentUtil::Simplex&           input,
     std::transform(output,
                    outputEnd,
                    std::back_inserter(d_gateways),
-                   [](auto& duplex) { return duplex.d_tunnel.d_destination; });
+                   [](auto& duplex) -> Gateway {
+                       return {
+                           duplex.d_tunnel.d_destination, {
+                               duplex.d_interfaceName,
+                               duplex.d_tunnel.d_source,
+                               duplex.d_tunnel.d_destination,
+                               [](auto&&, auto&&, auto&&) -> int { return 0; },
+                           },
+                       };
+                   });
 }
 
 // MANIPULATORS
@@ -177,6 +208,12 @@ int Listener::open(std::ostream& errorStream, const maxwell::Queue& queue)
 {
     if (d_input.open(errorStream, 10, 65536, true, queue)) {
         return -1;
+    }
+
+    for (auto&& gateway: d_gateways) {
+        if (gateway.d_duplex.open(errorStream, 10, 65536, true, queue)) {
+            return -1;
+        }
     }
 
     if (d_resolver.open(errorStream, 10, 65536, true, queue)) {
