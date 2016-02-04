@@ -10,8 +10,8 @@
 #include <conduit_resolver.h>
 #endif
 
-#ifndef INCLUDED_TRAMMEL_DUPLEX
-#include <trammel_duplex.h>
+#ifndef INCLUDED_TRAMMEL_LINK
+#include <trammel_link.h>
 #endif
 
 #ifndef INCLUDED_CSTDINT
@@ -39,40 +39,28 @@ namespace conduit {
 
 class Listener {
     // PRIVATE TYPES
-    struct Query {
-        std::size_t d_preferredGatewayIndex;
-        std::size_t d_gatewaysRemaining;
-    };
-
-    struct Gateway {
-        std::uint32_t   d_address;
-        trammel::Duplex d_duplex;
-    };
-
-    typedef std::vector<Gateway>                         Gateways;
-    typedef std::unordered_map<std::string, Query>       Queries;
-    typedef std::unordered_map<std::uint32_t, Gateway *> Routes;
+    typedef std::unordered_map<std::uint32_t,
+                               Resolver::Gateways::size_type> Routes;
 
     // DATA
-    trammel::Duplex d_input;
-    Gateways        d_gateways;
-    Resolver        d_resolver;
-    Queries         d_queries;
-    Routes          d_routes;
+    trammel::Link      d_input;
+    Resolver::Gateways d_gateways;
+    Resolver           d_resolver;
+    Routes             d_routes;
 
     // MODIFIERS
-    int processDnsResponse(const std::uint8_t *packetData,
-                           std::size_t         packetLength,
-                           std::size_t         gatewayIndex);
+    int processInputPacket(trammel::Link::PacketType  type,
+                           const std::uint8_t        *data,
+                           std::size_t                length);
         // TBD: contract
 
-    int processDnsRequest(const std::uint8_t *request,
-                          std::size_t         requestLength);
+    int processOutputPacket(trammel::Link::PacketType  type,
+                            const std::uint8_t        *data,
+                            std::size_t                length);
         // TBD: contract
 
-    int processPacket(hauberk::EthernetUtil::Type  type,
-                      const std::uint8_t          *packetData,
-                      std::size_t                  packetLength);
+    void routeAdvised(std::uint32_t          destination,
+                      Resolver::GatewayIndex gatewayIndex);
         // TBD: contract
 
   public:
@@ -81,13 +69,15 @@ class Listener {
     Listener& operator=(const Listener&) = delete;
 
     // CREATORS
-    Listener(const ArgumentUtil::Simplex&           input,
-             ArgumentUtil::Duplexes::const_iterator output,
-             ArgumentUtil::Duplexes::const_iterator outputEnd);
+    Listener();
         // TBD: contract
 
     // MANIPULATORS
-    int open(std::ostream& errorStream, const maxwell::Queue& queue);
+    int open(std::ostream&                          errorStream,
+             const maxwell::Queue&                  queue,
+             const ArgumentUtil::Simplex&           input,
+             ArgumentUtil::Duplexes::const_iterator output,
+             ArgumentUtil::Duplexes::const_iterator outputEnd);
         // TBD: contract
 };
 

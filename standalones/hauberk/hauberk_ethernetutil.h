@@ -21,7 +21,7 @@ namespace hauberk {
 struct EthernetUtil {
     // TYPES
     enum class Type : std::uint16_t {
-        INTERNET = 0x0800,
+        Internet = 0x0800,
         ARP      = 0x0806,
     };
 

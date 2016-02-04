@@ -16,7 +16,7 @@ add_library(hauberk standalones/hauberk/hauberk_arputil.cpp
 target_include_directories(hauberk PUBLIC standalones/hauberk)
 
 add_library(trammel standalones/trammel/trammel_address.cpp
-                    standalones/trammel/trammel_duplex.cpp
+                    standalones/trammel/trammel_link.cpp
                     standalones/trammel/trammel_interface.cpp
                     standalones/trammel/trammel_interfacesutil.cpp
                     standalones/trammel/trammel_iterator.cpp

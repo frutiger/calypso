@@ -2,10 +2,11 @@
 
 #include <conduit_resolver.h>
 
+#include <hauberk_bufferutil.h>
 #include <hauberk_dnsutil.h>
 #include <hauberk_internetutil.h>
 #include <hauberk_udputil.h>
-#include <trammel_duplex.h>
+#include <trammel_link.h>
 
 #include <iostream>
 
@@ -15,126 +16,140 @@ namespace conduit {
                                // class Resolver
                                // --------------
 
-// MODIFIERS
-int Resolver::processPacket(hauberk::EthernetUtil::Type  type,
-                            const std::uint8_t          *packetData,
-                            std::size_t                  packetLength)
+// CLASS METHODS
+bool Resolver::isNameResolution(trammel::Link::PacketType  type,
+                                const std::uint8_t        *data)
 {
-    typedef hauberk::EthernetUtil EU;
     typedef hauberk::InternetUtil IU;
     typedef hauberk::UdpUtil      UU;
-    typedef hauberk::DnsUtil      DU;
 
-    switch (type) {
-      case EU::Type::ARP: {
-      } return 0;
-
-      case EU::Type::INTERNET: {
-        if (IU::Protocol(IU::protocol(packetData)) != IU::Protocol::UDP) {
-            return 0;
-        }
-
-        const std::uint8_t *udp = IU::payload(packetData);
-        const std::uint8_t *dns = UU::payload(udp);
-        Transactions::const_iterator transaction =
-                                   d_transactions.find(DU::transactionId(dns));
-        if (transaction == d_transactions.end()) {
-            return 0;
-        }
-
-        std::vector<std::uint8_t> newResponse(packetData,
-                                              packetData + packetLength);
-        IU::setSourceAddress(newResponse.data(),
-                             std::get<1>(transaction->second));
-        std::uint8_t *newUdp = IU::payload(newResponse.data());
-        std::uint8_t *newDns = UU::payload(newUdp);
-        DU::setTransactionId(newDns, std::get<0>(transaction->second));
-        UU::updateChecksum(newUdp);
-        std::get<2>(transaction->second)(newResponse.data(),
-                                         newResponse.size(),
-                                         std::get<1>(transaction->second));
-        d_transactions.erase(transaction);
-      } return 0;
-
-      default:
-        return 0;
+    if (type != trammel::Link::PacketType::Internet) {
+        return false;
     }
+
+    if (IU::Protocol(IU::protocol(data)) != IU::Protocol::UDP) {
+        return false;
+    }
+    const std::uint8_t *udp = IU::payload(data);
+
+    // TBD: distinguish between input and output?
+    return UU::Port(UU::destinationPort(udp)) == UU::Port::DNS ||
+           UU::Port(UU::sourcePort(udp))      == UU::Port::DNS;
 }
 
 // CREATORS
-Resolver::Resolver(ArgumentUtil::Duplexes::const_iterator output,
-                   ArgumentUtil::Duplexes::const_iterator outputEnd)
-: d_duplexes()
-, d_engine((std::mt19937(std::random_device()())))
-, d_transactions()
+Resolver::Resolver(const RouteAdvisory& adviseRoute)
+: d_adviseRoute(adviseRoute)
+, d_transactionIdGenerator((std::mt19937(std::random_device()())))
+, d_queries()
 {
-    for (; output != outputEnd; ++output) {
-        d_duplexes.emplace_back(output->d_interfaceName,
-                                output->d_tunnel.d_source,
-                                output->d_tunnel.d_destination,
-                                std::bind(&Resolver::processPacket,
-                                          this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2,
-                                          std::placeholders::_3));
-    }
 }
 
 // MANIPULATORS
-int Resolver::open(std::ostream&         errorStream,
-                   int                   timeoutMilliseconds,
-                   int                   snapshotLength,
-                   int                   nonblock,
-                   const maxwell::Queue& queue)
+int Resolver::processInputPacket(const Gateways::iterator&  gatewayBegin,
+                                 Gateways::size_type        numGateways,
+                                 const std::uint8_t        *data,
+                                 std::size_t                length)
 {
-    for (auto& duplex: d_duplexes) {
-        if (duplex.open(errorStream,
-                        timeoutMilliseconds,
-                        snapshotLength,
-                        nonblock,
-                        queue)) {
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int Resolver::resolve(const std::uint8_t *request,
-                      std::size_t         requestLength,
-                      const Handler&      handler)
-{
-    typedef hauberk::EthernetUtil EU;
     typedef hauberk::InternetUtil IU;
     typedef hauberk::UdpUtil      UU;
     typedef hauberk::DnsUtil      DU;
 
-    const std::uint8_t *udp     = IU::payload(request);
-    const std::uint8_t *dns     = UU::payload(udp);
-    std::uint16_t transactionId = DU::transactionId(dns);
-    for (decltype(d_duplexes.size()) i = 0; i != d_duplexes.size(); ++i) {
-        std::uint16_t newTransactionId = d_engine();
-        while (true) {
-            if (d_transactions.insert({ newTransactionId,
-                                        { transactionId,
-                                          i,
-                                          handler }}).second) {
-                break;
-            }
-        }
+    const std::uint8_t *udp = IU::payload(data);
+    const std::uint8_t *dns = UU::payload(udp);
+    std::uint16_t id        = DU::transactionId(dns);
 
-        std::vector<std::uint8_t> newRequest(request, request + requestLength);
-        std::uint8_t *udp = IU::payload(newRequest.data());
+    auto query = d_queries.insert({ 0, numGateways });
+    for (GatewayIndex gatewayIndex = 0;
+                      gatewayIndex < numGateways;
+                    ++gatewayIndex) {
+        std::uint16_t newId;
+        do {
+            newId = d_transactionIdGenerator();
+        } while (d_subQueries.find(newId) != d_subQueries.end());
+        d_subQueries[newId] = { query, id, gatewayIndex };
+
+        std::vector<std::uint8_t> newPacket(data, data + length);
+        std::uint8_t *udp = IU::payload(newPacket.data());
         UU::updateChecksum(udp);
         std::uint8_t *dns = UU::payload(udp);
-        DU::setTransactionId(dns, newTransactionId);
+        DU::setTransactionId(dns, newId);
 
-        if (d_duplexes[i].send(EU::Type::INTERNET,
-                               newRequest.data(),
-                               newRequest.size())) {
+        auto gateway = gatewayBegin + gatewayIndex;
+        if (gateway->d_link.send(trammel::Link::PacketType::Internet,
+                                 newPacket.data(),
+                                 newPacket.size())) {
             return -1;
         }
     }
+
     return 0;
+}
+
+void Resolver::processOutputPacket(std::vector<std::uint8_t> *newPacket,
+                                   const std::uint8_t        *data,
+                                   std::size_t                length)
+{
+    typedef hauberk::InternetUtil IU;
+    typedef hauberk::UdpUtil      UU;
+    typedef hauberk::DnsUtil      DU;
+
+    const std::uint8_t *udp = IU::payload(data);
+    const std::uint8_t *dns = UU::payload(udp);
+    auto subQuery = d_subQueries.find(DU::transactionId(dns));
+    if (subQuery == d_subQueries.end()) {
+        // TBD: warn on unexpected DNS response?
+        return;
+    }
+
+    for (auto responseIndex = 0;
+              responseIndex < DU::numResponses(dns);
+            ++responseIndex) {
+        auto                recordIndex = DU::numQueries(dns) + responseIndex;
+        const std::uint8_t *record      = DU::findRecord(dns, recordIndex);
+        if (DU::Type(DU::recordType(record)) != DU::Type::A) {
+            continue;
+        }
+
+        if (DU::Class(DU::recordClass(record)) != DU::Class::INTERNET) {
+            continue;
+        }
+
+        if (DU::recordDataLength(record) != 4) {
+            continue;
+        }
+
+        std::uint32_t address;
+        hauberk::BufferUtil::copy(&address, DU::recordData(record));
+
+        Queries::iterator query = subQuery->second.d_query;
+        auto preferredGateway   = std::min(query->d_preferredGatewayIndex,
+                                           subQuery->second.d_gatewayIndex);
+        query->d_preferredGatewayIndex = preferredGateway;
+        d_subQueries.erase(subQuery);
+
+        --query->d_gatewaysRemaining;
+        if (query->d_gatewaysRemaining != 0) {
+            continue;
+        }
+
+        d_adviseRoute(address, query->d_preferredGatewayIndex);
+
+        std::string addrString, gwyString;
+        hauberk::InternetAddressUtil::toDisplay(&addrString, address);
+        std::cout << "Name " << name << " "
+                     "address " << addrString << " "
+                     "gateway " << query->d_preferredGatewayIndex << '\n';
+        d_queries.erase(query);
+    }
+
+    newPacket->assign(data, data + length);
+    // TBD: do we need this?
+    // IU::setSourceAddress(newPacket.data(), ...);
+    std::uint8_t *newUdp = IU::payload(newPacket.data());
+    std::uint8_t *newDns = UU::payload(newUdp);
+    DU::setTransactionId(newUdp, query->second.d_originalTransactionId);
+    UU::updateChecksum(newUdp);
 }
 
 }  // close namespace 'conduit'
